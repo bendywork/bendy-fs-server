@@ -1,0 +1,21 @@
+name = "bendy-fs-server"
+main = "build/shim.js"
+compatibility_date = "2025-07-10"
+compatibility_flags = ["nodejs_compat"]
+
+[[kv_namespaces]]
+binding = "BENDY_FS_CONFIGS"
+id = "d633d4280dca44d3a03eb93728039bd2"
+preview_id = "d633d4280dca44d3a03eb93728039bd2"
+
+[vars]
+# Set via `wrangler secret put`
+# ADMIN_GITHUB_USERNAMES
+# GITHUB_CLIENT_ID
+# GITHUB_CLIENT_SECRET
+# GITHUB_REDIRECT_URI
+# JWT_SECRET
+
+[observability]
+enabled = true
+head_sampling_rate = 1
