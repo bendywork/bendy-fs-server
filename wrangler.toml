@@ -1,5 +1,5 @@
 name = "bendy-fs-server"
-main = "build/shim.js"
+main = "build/worker.mjs"
 compatibility_date = "2025-07-10"
 compatibility_flags = ["nodejs_compat"]
 
@@ -19,3 +19,13 @@ preview_id = "d633d4280dca44d3a03eb93728039bd2"
 [observability]
 enabled = true
 head_sampling_rate = 1
+
+[[rules]]
+type = "ESModule"
+globs = ["**/*.js"]
+fallthrough = false
+
+[[rules]]
+type = "CompiledWasm"
+globs = ["**/*.wasm"]
+fallthrough = false

@@ -44,7 +44,7 @@ pub async fn main(req: Request, env: Env, _ctx: worker::Context) -> Result<Respo
 
     router
         // OPTIONS — CORS preflight for all routes
-        .options("/api/:rest*", |_, _| cors_response())
+        .options("/*rest", |_, _| cors_response())
         // ── Static ──
         .get_async("/admin", |_req, _ctx| async move {
             let html = include_str!("../static/admin.html");
