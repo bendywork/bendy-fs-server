@@ -24,7 +24,7 @@ async fn resolve_tenant_backend(req: &Request, env: &Env) -> Result<(String, Str
         .await?
         .ok_or_else(|| worker::Error::RustError("Tenant not found".into()))?;
 
-    if !tenant.is_active {
+    if tenant.is_active == 0 {
         return Err(worker::Error::RustError("Tenant is disabled".into()));
     }
 

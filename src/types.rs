@@ -1,32 +1,4 @@
-use serde::{Deserialize, Deserializer, Serialize};
-use serde::de::{self, Visitor};
-use std::fmt;
-
-fn int_or_bool_to_bool<'de, D>(deserializer: D) -> Result<bool, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    struct IntBoolVisitor;
-    impl<'de> Visitor<'de> for IntBoolVisitor {
-        type Value = bool;
-        fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
-            f.write_str("a boolean or an integer (0 or 1)")
-        }
-        fn visit_bool<E: de::Error>(self, v: bool) -> Result<bool, E> {
-            Ok(v)
-        }
-        fn visit_i64<E: de::Error>(self, v: i64) -> Result<bool, E> {
-            Ok(v != 0)
-        }
-        fn visit_u64<E: de::Error>(self, v: u64) -> Result<bool, E> {
-            Ok(v != 0)
-        }
-        fn visit_f64<E: de::Error>(self, v: f64) -> Result<bool, E> {
-            Ok(v != 0.0)
-        }
-    }
-    deserializer.deserialize_any(IntBoolVisitor)
-}
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -263,8 +235,7 @@ pub struct Tenant {
     pub requests_used_today: i64,
     pub storage_used_bytes: i64,
     pub last_request_date: String,
-    #[serde(deserialize_with = "int_or_bool_to_bool")]
-    pub is_active: bool,
+    pub is_active: i64,
     pub created_at: u64,
     pub updated_at: u64,
 }

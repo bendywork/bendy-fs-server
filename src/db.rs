@@ -45,7 +45,7 @@ pub async fn verify_tenant_credentials(
         .await?
         .ok_or_else(|| worker::Error::RustError("Invalid API key".into()))?;
 
-    if !tenant.is_active {
+    if tenant.is_active == 0 {
         return Err(worker::Error::RustError("Tenant is disabled".into()));
     }
 
@@ -65,7 +65,7 @@ pub async fn check_and_update_quota(
         .await?
         .ok_or_else(|| worker::Error::RustError("Tenant not found".into()))?;
 
-    if !tenant.is_active {
+    if tenant.is_active == 0 {
         return Err(worker::Error::RustError("Tenant is disabled".into()));
     }
 
@@ -196,7 +196,7 @@ pub async fn count_file_records(env: &Env, tenant_id: &str) -> Result<i64> {
 
 pub async fn create_tenant(env: &Env, tenant: &Tenant) -> Result<()> {
     let d = db(env)?;
-    let is_active_int = if tenant.is_active { 1.0 } else { 0.0 };
+    let is_active_int = tenant.is_active as f64;
     d.prepare(
         "INSERT INTO tenants (id, name, api_key, api_secret, default_backend_config_id, \
          max_requests_per_day, max_storage_bytes, requests_used_today, storage_used_bytes, \
@@ -221,7 +221,7 @@ pub async fn create_tenant(env: &Env, tenant: &Tenant) -> Result<()> {
 
 pub async fn update_tenant(env: &Env, tenant_id: &str, updated: &Tenant) -> Result<()> {
     let d = db(env)?;
-    let is_active_int = if updated.is_active { 1.0 } else { 0.0 };
+    let is_active_int = updated.is_active as f64;
     d.prepare(
         "UPDATE tenants SET name = ?1, default_backend_config_id = ?2, \
          max_requests_per_day = ?3, max_storage_bytes = ?4, is_active = ?5, \

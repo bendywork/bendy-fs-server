@@ -421,7 +421,7 @@ pub async fn handle_create_tenant(mut req: Request, env: &Env) -> Result<Respons
         requests_used_today: 0,
         storage_used_bytes: 0,
         last_request_date: String::new(),
-        is_active: true,
+        is_active: 1,
         created_at: now,
         updated_at: now,
     };
@@ -466,7 +466,7 @@ pub async fn handle_update_tenant(mut req: Request, env: &Env, tenant_id: &str) 
         default_backend_config_id: input.default_backend_config_id.unwrap_or(existing.default_backend_config_id),
         max_requests_per_day: input.max_requests_per_day.unwrap_or(existing.max_requests_per_day),
         max_storage_bytes: input.max_storage_bytes.unwrap_or(existing.max_storage_bytes),
-        is_active: input.is_active.unwrap_or(existing.is_active),
+        is_active: input.is_active.map(|b| if b { 1 } else { 0 }).unwrap_or(existing.is_active),
         updated_at: now_ts(),
         ..existing
     };
