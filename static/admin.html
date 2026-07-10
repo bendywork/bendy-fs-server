@@ -10,513 +10,952 @@
     darkMode: 'class',
     theme: {
       extend: {
-        colors: {
-          gray: {
-            850: '#1a1a2e',
-            950: '#0f0f1a',
-          }
-        }
-      }
-    }
+        fontFamily: {
+          sans: ['-apple-system', 'BlinkMacSystemFont', 'SF Pro Display', 'SF Pro Text', 'sans-serif'],
+        },
+      },
+    },
   }
 </script>
 <style>
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-  .toast { animation: slideIn 0.3s ease-out; }
-  @keyframes slideIn { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-  .modal-overlay { backdrop-filter: blur(4px); }
-  input:focus, select:focus { outline: none; }
-  .field-group { transition: all 0.2s ease; }
+  *, *::before, *::after { box-sizing: border-box; }
+
+  :root {
+    --bg: #0a0a0a;
+    --text: #f5f5f5;
+    --text-secondary: #a0a0a0;
+    --border: rgba(255,255,255,0.08);
+    --glass: rgba(255,255,255,0.04);
+    --glass-hover: rgba(255,255,255,0.06);
+    --surface: rgba(255,255,255,0.03);
+    --accent: #f5f5f5;
+    --accent-hover: #e5e5e5;
+    --danger: #ef4444;
+    --danger-hover: #dc2626;
+    --success: #22c55e;
+    --warning: #f59e0b;
+    --input-bg: rgba(255,255,255,0.05);
+    --input-focus: rgba(255,255,255,0.15);
+  }
+
+  .light {
+    --bg: #f5f5f7;
+    --text: #1d1d1f;
+    --text-secondary: #86868b;
+    --border: rgba(0,0,0,0.08);
+    --glass: rgba(255,255,255,0.7);
+    --glass-hover: rgba(255,255,255,0.85);
+    --surface: rgba(0,0,0,0.02);
+    --accent: #1d1d1f;
+    --accent-hover: #000;
+    --danger: #ef4444;
+    --danger-hover: #dc2626;
+    --success: #16a34a;
+    --warning: #d97706;
+    --input-bg: rgba(0,0,0,0.04);
+    --input-focus: rgba(0,0,0,0.12);
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background: var(--bg);
+    color: var(--text);
+    transition: background 0.3s ease, color 0.3s ease;
+  }
+
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--input-focus); border-radius: 3px; }
+
+  .glass {
+    background: var(--glass);
+    backdrop-filter: blur(40px);
+    -webkit-backdrop-filter: blur(40px);
+  }
+
+  .glass-hover:hover {
+    background: var(--glass-hover);
+  }
+
+  .hairline { border-color: var(--border); }
+
+  input:focus, select:focus, textarea:focus {
+    outline: none;
+    box-shadow: 0 0 0 1px var(--input-focus);
+  }
+
+  input, select, textarea {
+    background: var(--input-bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 13px;
+    font-family: inherit;
+    transition: box-shadow 0.2s ease, border-color 0.2s ease;
+  }
+  input::placeholder, textarea::placeholder { color: var(--text-secondary); }
+  select option { background: #1a1a1a; color: #f5f5f5; }
+  .light select option { background: #fff; color: #1d1d1f; }
+
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 500;
+    font-family: inherit; cursor: pointer;
+    transition: all 0.15s cubic-bezier(0.15, 1, 0.3, 1);
+    border: 1px solid transparent;
+  }
+  .btn:active { transform: scale(0.97); }
+
+  .btn-primary {
+    background: var(--accent); color: var(--bg);
+  }
+  .btn-secondary {
+    background: var(--input-bg); border-color: var(--border); color: var(--text);
+  }
+  .btn-secondary:hover { background: var(--glass-hover); }
+  .btn-danger {
+    background: var(--danger); color: #fff;
+  }
+  .btn-danger:hover { background: var(--danger-hover); }
+  .btn-ghost {
+    background: transparent; color: var(--text-secondary);
+  }
+  .btn-ghost:hover { color: var(--text); background: var(--input-bg); }
+  .btn-sm { padding: 5px 10px; font-size: 12px; border-radius: 6px; }
+
+  .card {
+    background: var(--glass);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    transition: transform 0.2s cubic-bezier(0.15, 1, 0.3, 1), background 0.2s ease;
+  }
+  .card-hover:hover {
+    transform: translateY(-1px);
+    background: var(--glass-hover);
+  }
+
+  .modal-backdrop {
+    background: rgba(0,0,0,0.65);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  @keyframes toastIn {
+    from { opacity: 0; transform: translateY(-8px) scale(0.96); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .toast-enter { animation: toastIn 0.35s cubic-bezier(0.15, 1, 0.3, 1) forwards; }
+
+  @keyframes modalIn {
+    from { opacity: 0; transform: scale(0.97) translateY(6px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  .modal-panel { animation: modalIn 0.25s cubic-bezier(0.15, 1, 0.3, 1) forwards; }
+
+  .sidebar-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 14px; margin: 1px 8px; border-radius: 8px;
+    font-size: 13px; font-weight: 450; cursor: pointer;
+    color: var(--text-secondary);
+    transition: all 0.15s ease;
+    user-select: none;
+  }
+  .sidebar-item:hover { background: var(--glass-hover); color: var(--text); }
+  .sidebar-item.active {
+    background: var(--input-bg); color: var(--text); font-weight: 500;
+  }
+
+  .sidebar-icon { width: 18px; height: 18px; opacity: 0.5; flex-shrink: 0; }
+  .sidebar-item.active .sidebar-icon { opacity: 0.8; }
+
+  .progress-fill { transition: width 0.4s ease; }
+
+  tr.row-hover { transition: background 0.15s ease; }
+  tr.row-hover:hover { background: var(--surface); }
+
+  .badge {
+    display: inline-flex; align-items: center; padding: 2px 8px;
+    border-radius: 20px; font-size: 11px; font-weight: 500;
+  }
+  .badge-active { background: rgba(34,197,94,0.15); color: #22c55e; }
+  .badge-inactive { background: rgba(239,68,68,0.15); color: #ef4444; }
+  .light .badge-active { background: rgba(22,163,74,0.12); color: #16a34a; }
+
+  .spinner {
+    width: 14px; height: 14px; border: 2px solid var(--border);
+    border-top-color: var(--text-secondary); border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .empty-state {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 48px 24px; color: var(--text-secondary);
+  }
 </style>
 </head>
-<body class="bg-gray-950 text-gray-100 min-h-screen">
+<body class="h-screen overflow-hidden">
 
 <!-- Toast container -->
-<div id="toasts" class="fixed top-4 right-4 z-50 flex flex-col gap-2"></div>
+<div id="toasts" class="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-sm"></div>
 
 <!-- Login overlay -->
-<div id="login-overlay" class="fixed inset-0 bg-gray-950 flex items-center justify-center z-40">
-  <div class="bg-gray-900 border border-gray-800 rounded-xl p-8 w-full max-w-md text-center">
-    <h1 class="text-2xl font-bold mb-2">Bendy FS Server</h1>
-    <p class="text-gray-400 mb-6 text-sm">Universal File Storage Proxy — Admin Dashboard</p>
-    <a href="/api/auth/github/login"
-      class="inline-flex items-center gap-2 bg-gray-100 hover:bg-white text-gray-900 rounded-lg px-6 py-3 font-medium transition-colors">
-      <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
-      </svg>
-      Login with GitHub
-    </a>
-    <p id="login-error" class="text-red-400 text-sm mt-4 hidden"></p>
+<div id="login-overlay" class="fixed inset-0 z-40 flex items-center justify-center">
+  <div class="absolute inset-0 bg-black/80 backdrop-blur-xl"></div>
+  <div class="relative glass border hairline rounded-2xl p-10 w-full max-w-sm text-center modal-panel">
+    <svg class="w-12 h-12 mx-auto mb-4 opacity-40" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+    <h2 class="text-xl font-semibold mb-2">Bendy FS Server</h2>
+    <p class="text-sm opacity-50 mb-8">Sign in with your GitHub account to continue</p>
+    <button id="login-btn" class="btn btn-primary w-full py-3 text-sm" onclick="login()">
+      <svg class="w-5 h-5 mr-2" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+      Sign in with GitHub
+    </button>
+    <p id="login-error" class="text-sm text-red-400 mt-4 hidden"></p>
   </div>
 </div>
 
-<!-- Main content (hidden until login) -->
-<div id="app" class="hidden">
+<!-- Main app shell -->
+<div id="app-shell" class="hidden h-full flex flex-col">
   <!-- Header -->
-  <header class="border-b border-gray-800 bg-gray-900 sticky top-0 z-30">
-    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+  <header class="glass border-b hairline flex-shrink-0">
+    <div class="px-6 h-12 flex items-center justify-between">
       <div class="flex items-center gap-3">
-        <span class="text-xl font-bold tracking-tight">Bendy FS</span>
-        <span class="text-xs text-gray-500 bg-gray-800 px-2 py-0.5 rounded">Admin</span>
+        <h1 class="text-sm font-semibold tracking-wide">Bendy FS Server</h1>
+        <span class="text-xs opacity-30">Admin</span>
       </div>
       <div class="flex items-center gap-3">
-        <span id="user-badge" class="text-xs text-gray-400 bg-gray-800 px-2 py-1 rounded"></span>
-        <button onclick="logout()" class="text-sm text-gray-400 hover:text-gray-200 transition-colors">Logout</button>
+        <span id="user-name" class="text-xs opacity-50"></span>
+        <button id="theme-toggle" class="btn btn-ghost btn-sm w-8 h-8 p-0 rounded-full" onclick="toggleTheme()" title="Toggle theme">
+          <svg id="theme-icon-sun" class="w-4 h-4 hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+          <svg id="theme-icon-moon" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+        </button>
+        <button class="btn btn-ghost btn-sm text-xs" onclick="logout()">Sign Out</button>
       </div>
     </div>
   </header>
 
-  <main class="max-w-6xl mx-auto px-4 py-6">
-    <!-- Stats bar -->
-    <div class="flex items-center justify-between mb-6">
-      <div>
-        <h2 class="text-lg font-semibold">Storage Backends</h2>
-        <p class="text-sm text-gray-500 mt-0.5" id="config-count">Loading...</p>
+  <!-- Body: sidebar + content -->
+  <div class="flex flex-1 overflow-hidden">
+
+    <!-- Sidebar -->
+    <aside class="glass border-r hairline w-52 flex-shrink-0 flex flex-col py-3">
+      <div class="sidebar-item active" data-sidebar="configs" onclick="switchTab('configs')">
+        <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+        Backend Configs
       </div>
-      <button onclick="openCreateModal()"
-        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-        </svg>
-        Add Backend
-      </button>
-    </div>
+      <div class="sidebar-item" data-sidebar="tenants" onclick="switchTab('tenants')">
+        <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+        Tenants
+      </div>
+      <div class="sidebar-item" data-sidebar="files" onclick="switchTab('files')">
+        <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        File Records
+      </div>
+    </aside>
 
-    <!-- Config cards -->
-    <div id="config-grid" class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-      <!-- Rendered by JS -->
-    </div>
+    <!-- Main content -->
+    <main class="flex-1 overflow-y-auto px-8 py-6">
 
-    <!-- Empty state -->
-    <div id="empty-state" class="hidden text-center py-16">
-      <p class="text-gray-500 text-lg mb-2">No storage backends configured</p>
-      <p class="text-gray-600 text-sm mb-4">Add your first backend (S3, Dufs, or Redis) to get started</p>
-      <button onclick="openCreateModal()"
-        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
-        Add Backend
-      </button>
-    </div>
-  </main>
-</div>
+      <!-- Configs Tab -->
+      <section id="tab-configs">
+        <div class="flex items-center justify-between mb-5">
+          <div>
+            <h2 class="text-lg font-semibold">Backend Configs</h2>
+            <p class="text-xs opacity-40 mt-0.5">Manage S3, Dufs, and Redis storage backends</p>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="openConfigModal()">+ New Config</button>
+        </div>
+        <div id="configs-list" class="space-y-3"></div>
+      </section>
 
-<!-- Create/Edit Modal -->
-<div id="config-modal" class="fixed inset-0 z-50 hidden items-center justify-center">
-  <div class="modal-overlay absolute inset-0 bg-black/60" onclick="closeModal()"></div>
-  <div class="relative bg-gray-900 border border-gray-800 rounded-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
-    <div class="p-6">
-      <h3 id="modal-title" class="text-lg font-semibold mb-4">Add Backend</h3>
-      <form id="config-form" class="space-y-3" onsubmit="saveConfig(event)">
-        <input type="hidden" id="edit-id">
-        <div>
-          <label class="block text-sm text-gray-400 mb-1">Backend Type</label>
-          <select id="field-type" onchange="onTypeChange()"
-            class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-gray-100 focus:border-blue-500 transition-colors text-sm">
-            <option value="s3">S3 (Object Storage)</option>
-            <option value="dufs">Dufs (File Server)</option>
-            <option value="redis">Redis (KV Store)</option>
+      <!-- Tenants Tab -->
+      <section id="tab-tenants" class="hidden">
+        <div class="flex items-center justify-between mb-5">
+          <div>
+            <h2 class="text-lg font-semibold">Tenants</h2>
+            <p class="text-xs opacity-40 mt-0.5">Manage tenant accounts and quota limits</p>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="openTenantModal()">+ New Tenant</button>
+        </div>
+        <div id="tenants-list" class="space-y-3"></div>
+      </section>
+
+      <!-- Files Tab -->
+      <section id="tab-files" class="hidden">
+        <div class="mb-5">
+          <h2 class="text-lg font-semibold">File Records</h2>
+          <p class="text-xs opacity-40 mt-0.5">View files across all tenants</p>
+        </div>
+        <div class="mb-4">
+          <label class="text-xs opacity-50 block mb-1.5">Select Tenant</label>
+          <select id="files-tenant-select" class="w-full max-w-xs" onchange="loadFiles()">
+            <option value="">-- Select a tenant --</option>
           </select>
         </div>
+        <div id="files-table-container"></div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<!-- Config Modal -->
+<div id="config-modal" class="fixed inset-0 z-50 hidden items-center justify-center">
+  <div class="absolute inset-0 modal-backdrop" onclick="closeConfigModal()"></div>
+  <div class="relative glass border hairline rounded-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto modal-panel">
+    <div class="sticky top-0 glass border-b hairline px-6 py-4 flex items-center justify-between rounded-t-2xl">
+      <h3 id="config-modal-title" class="text-sm font-semibold">New Config</h3>
+      <button class="btn btn-ghost btn-sm w-7 h-7 p-0 rounded-full text-lg leading-none" onclick="closeConfigModal()">&times;</button>
+    </div>
+    <form id="config-form" class="p-6 space-y-4" onsubmit="saveConfig(event)">
+      <input type="hidden" id="cfg-id">
+      <div>
+        <label class="text-xs opacity-50 block mb-1.5">Name</label>
+        <input type="text" id="cfg-name" class="w-full" placeholder="My S3 Bucket" required>
+      </div>
+      <div>
+        <label class="text-xs opacity-50 block mb-1.5">Backend Type</label>
+        <select id="cfg-type" class="w-full" onchange="onConfigTypeChange()">
+          <option value="s3">S3</option>
+          <option value="dufs">Dufs</option>
+          <option value="redis">Redis</option>
+        </select>
+      </div>
+      <div>
+        <label class="text-xs opacity-50 block mb-1.5">Endpoint</label>
+        <input type="text" id="cfg-endpoint" class="w-full" placeholder="https://s3.amazonaws.com" required>
+      </div>
+      <!-- S3 fields -->
+      <div class="cfg-s3">
+        <label class="text-xs opacity-50 block mb-1.5">Region</label>
+        <input type="text" id="cfg-region" class="w-full" placeholder="us-east-1">
+      </div>
+      <div class="cfg-s3">
+        <label class="text-xs opacity-50 block mb-1.5">Bucket</label>
+        <input type="text" id="cfg-bucket" class="w-full" placeholder="my-bucket">
+      </div>
+      <div class="cfg-s3">
+        <label class="text-xs opacity-50 block mb-1.5">Access Key ID</label>
+        <input type="text" id="cfg-access-key-id" class="w-full" placeholder="AKIA...">
+      </div>
+      <div class="cfg-s3">
+        <label class="text-xs opacity-50 block mb-1.5">Secret Access Key</label>
+        <input type="password" id="cfg-secret-access-key" class="w-full" placeholder="(unchanged if empty)">
+      </div>
+      <div class="cfg-s3 flex items-center gap-2">
+        <input type="checkbox" id="cfg-force-path-style" class="w-4 h-4">
+        <label class="text-xs opacity-70">Force Path Style</label>
+      </div>
+      <!-- Dufs fields -->
+      <div class="cfg-dufs hidden">
+        <label class="text-xs opacity-50 block mb-1.5">Username</label>
+        <input type="text" id="cfg-dufs-username" class="w-full" placeholder="admin">
+      </div>
+      <div class="cfg-dufs hidden">
+        <label class="text-xs opacity-50 block mb-1.5">Password</label>
+        <input type="password" id="cfg-dufs-password" class="w-full" placeholder="(unchanged if empty)">
+      </div>
+      <!-- Redis fields -->
+      <div class="cfg-redis hidden">
+        <label class="text-xs opacity-50 block mb-1.5">Password</label>
+        <input type="password" id="cfg-redis-password" class="w-full" placeholder="(unchanged if empty)">
+      </div>
+      <div class="cfg-redis hidden">
+        <label class="text-xs opacity-50 block mb-1.5">DB Index</label>
+        <input type="number" id="cfg-db-index" class="w-full" placeholder="0" min="0">
+      </div>
+      <!-- OSS Preview -->
+      <div class="cfg-s3">
+        <label class="text-xs opacity-50 block mb-1.5">OSS Preview RPC URL</label>
+        <input type="text" id="cfg-oss-preview-url" class="w-full" placeholder="https://...">
+      </div>
+      <div class="cfg-s3">
+        <label class="text-xs opacity-50 block mb-1.5">OSS Preview Cookie</label>
+        <input type="text" id="cfg-oss-preview-cookie" class="w-full" placeholder="cookie=value">
+      </div>
+      <div class="flex justify-end gap-2 pt-2">
+        <button type="button" class="btn btn-secondary btn-sm" onclick="closeConfigModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary btn-sm">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Tenant Modal -->
+<div id="tenant-modal" class="fixed inset-0 z-50 hidden items-center justify-center">
+  <div class="absolute inset-0 modal-backdrop" onclick="closeTenantModal()"></div>
+  <div class="relative glass border hairline rounded-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto modal-panel">
+    <div class="sticky top-0 glass border-b hairline px-6 py-4 flex items-center justify-between rounded-t-2xl">
+      <h3 id="tenant-modal-title" class="text-sm font-semibold">New Tenant</h3>
+      <button class="btn btn-ghost btn-sm w-7 h-7 p-0 rounded-full text-lg leading-none" onclick="closeTenantModal()">&times;</button>
+    </div>
+    <form id="tenant-form" class="p-6 space-y-4" onsubmit="saveTenant(event)">
+      <input type="hidden" id="tnt-id">
+      <div>
+        <label class="text-xs opacity-50 block mb-1.5">Name</label>
+        <input type="text" id="tnt-name" class="w-full" placeholder="My App" required>
+      </div>
+      <div>
+        <label class="text-xs opacity-50 block mb-1.5">Default Backend Config</label>
+        <select id="tnt-backend-config" class="w-full" required></select>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
         <div>
-          <label class="block text-sm text-gray-400 mb-1">Name</label>
-          <input type="text" id="field-name" required placeholder="e.g. My S3 Bucket"
-            class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-gray-100 focus:border-blue-500 transition-colors text-sm">
+          <label class="text-xs opacity-50 block mb-1.5">Max Requests / Day</label>
+          <input type="number" id="tnt-max-requests" class="w-full" value="10000" min="0">
         </div>
         <div>
-          <label class="block text-sm text-gray-400 mb-1">Endpoint URL</label>
-          <input type="url" id="field-endpoint" required placeholder="https://s3.hi168.com"
-            class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-gray-100 focus:border-blue-500 transition-colors text-sm">
+          <label class="text-xs opacity-50 block mb-1.5">Max Storage (bytes)</label>
+          <input type="number" id="tnt-max-storage" class="w-full" value="10737418240" min="0">
         </div>
-        <!-- S3 fields -->
-        <div id="s3-fields" class="field-group space-y-3">
-          <div>
-            <label class="block text-sm text-gray-400 mb-1">Region <span class="text-gray-600">(optional)</span></label>
-            <input type="text" id="field-region" placeholder="Leave empty, defaults to us-east-1"
-              class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-gray-100 focus:border-blue-500 transition-colors text-sm">
-          </div>
-          <div>
-            <label class="block text-sm text-gray-400 mb-1">Bucket</label>
-            <input type="text" id="field-bucket" placeholder="my-bucket"
-              class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-gray-100 focus:border-blue-500 transition-colors text-sm">
-          </div>
-          <div>
-            <label class="block text-sm text-gray-400 mb-1">Access Key ID</label>
-            <input type="text" id="field-access-key" placeholder="AKIA..."
-              class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-gray-100 focus:border-blue-500 transition-colors text-sm">
-          </div>
-          <div>
-            <label class="block text-sm text-gray-400 mb-1">Secret Access Key</label>
-            <input type="password" id="field-secret-key" placeholder="Enter secret key..."
-              class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-gray-100 focus:border-blue-500 transition-colors text-sm">
-            <p class="text-xs text-gray-600 mt-1">Leave empty to keep existing key when editing</p>
-          </div>
-          <label class="flex items-center gap-2 text-sm text-gray-400 cursor-pointer">
-            <input type="checkbox" id="field-force-path" class="rounded bg-gray-800 border-gray-700">
-            Force path-style URLs
-          </label>
-        </div>
-        <!-- Dufs fields -->
-        <div id="dufs-fields" class="field-group space-y-3 hidden">
-          <div>
-            <label class="block text-sm text-gray-400 mb-1">Username</label>
-            <input type="text" id="field-dufs-user" placeholder="admin"
-              class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-gray-100 focus:border-blue-500 transition-colors text-sm">
-          </div>
-          <div>
-            <label class="block text-sm text-gray-400 mb-1">Password</label>
-            <input type="password" id="field-dufs-pass" placeholder="Enter password..."
-              class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-gray-100 focus:border-blue-500 transition-colors text-sm">
-            <p class="text-xs text-gray-600 mt-1">Leave empty to keep existing password when editing</p>
-          </div>
-        </div>
-        <!-- Redis fields -->
-        <div id="redis-fields" class="field-group space-y-3 hidden">
-          <div>
-            <label class="block text-sm text-gray-400 mb-1">Redis Password / Token</label>
-            <input type="password" id="field-redis-pass" placeholder="Upstash REST token..."
-              class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-gray-100 focus:border-blue-500 transition-colors text-sm">
-            <p class="text-xs text-gray-600 mt-1">Leave empty to keep existing token when editing</p>
-          </div>
-          <div>
-            <label class="block text-sm text-gray-400 mb-1">DB Index</label>
-            <input type="number" id="field-db-index" placeholder="0" min="0"
-              class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-gray-100 focus:border-blue-500 transition-colors text-sm">
-          </div>
-        </div>
-        <div class="flex gap-3 pt-2">
-          <button type="submit"
-            class="flex-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg py-2 font-medium text-sm transition-colors">
-            Save
-          </button>
-          <button type="button" onclick="closeModal()"
-            class="flex-1 bg-gray-800 hover:bg-gray-750 border border-gray-700 text-gray-300 rounded-lg py-2 font-medium text-sm transition-colors">
-            Cancel
-          </button>
-        </div>
-      </form>
+      </div>
+      <div class="flex items-center gap-2" id="tnt-active-group">
+        <input type="checkbox" id="tnt-is-active" class="w-4 h-4" checked>
+        <label class="text-xs opacity-70">Active</label>
+      </div>
+      <div class="flex justify-end gap-2 pt-2">
+        <button type="button" class="btn btn-secondary btn-sm" onclick="closeTenantModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary btn-sm">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Delete Confirm Modal -->
+<div id="delete-modal" class="fixed inset-0 z-50 hidden items-center justify-center">
+  <div class="absolute inset-0 modal-backdrop" onclick="closeDeleteModal()"></div>
+  <div class="relative glass border hairline rounded-2xl w-full max-w-sm mx-4 modal-panel p-6 text-center">
+    <p class="text-sm mb-1" id="delete-message">Are you sure?</p>
+    <p class="text-xs opacity-40 mb-6">This action cannot be undone.</p>
+    <div class="flex justify-center gap-2">
+      <button class="btn btn-secondary btn-sm" onclick="closeDeleteModal()">Cancel</button>
+      <button class="btn btn-danger btn-sm" id="delete-confirm-btn">Delete</button>
     </div>
   </div>
 </div>
 
 <script>
-const API_BASE = '';
+// ── State ──
+let currentTab = 'configs';
+let currentUser = null;
+let configs = [];
+let tenants = [];
 
-async function api(path, options = {}) {
-  const headers = {
-    'Content-Type': 'application/json',
-    ...(options.headers || {}),
-  };
-  const resp = await fetch(`${API_BASE}${path}`, {
-    ...options,
-    headers,
-    credentials: 'same-origin',
-  });
-  if (resp.status === 401 || resp.status === 403) {
-    showLogin();
-    throw new Error('Unauthorized');
-  }
-  return resp;
+// ── Helpers ──
+function fmt(n) {
+  if (n == null) return '—';
+  if (n >= 1073741824) return (n / 1073741824).toFixed(1) + ' GB';
+  if (n >= 1048576) return (n / 1048576).toFixed(1) + ' MB';
+  if (n >= 1024) return (n / 1024).toFixed(1) + ' KB';
+  return n + ' B';
 }
 
-function showToast(msg, type = 'info') {
-  const colors = {
-    info: 'bg-blue-600',
-    success: 'bg-green-600',
-    error: 'bg-red-600',
-    warn: 'bg-yellow-600',
-  };
-  const container = document.getElementById('toasts');
-  const el = document.createElement('div');
-  el.className = `toast ${colors[type] || colors.info} text-white px-4 py-2.5 rounded-lg shadow-lg text-sm font-medium`;
+function fmtTs(sec) {
+  if (!sec) return '—';
+  return new Date(sec * 1000).toLocaleString();
+}
+
+function badge(t) {
+  const colors = { s3: 'rgba(59,130,246,0.15)', dufs: 'rgba(168,85,247,0.15)', redis: 'rgba(239,68,68,0.15)' };
+  return '<span class="badge" style="background:' + (colors[t] || 'rgba(255,255,255,0.1)') + '">' + (t || '').toUpperCase() + '</span>';
+}
+
+// ── Toast ──
+function toast(msg, type) {
+  type = type || 'info';
+  var bg = type === 'error' ? 'rgba(239,68,68,0.9)' : type === 'success' ? 'rgba(34,197,94,0.9)' : 'rgba(255,255,255,0.15)';
+  var el = document.createElement('div');
+  el.className = 'toast-enter px-4 py-2.5 rounded-xl text-sm';
+  el.style.cssText = 'background:' + bg + ';backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.1);color:#fff;';
   el.textContent = msg;
-  container.appendChild(el);
-  setTimeout(() => { el.remove(); }, 3500);
+  document.getElementById('toasts').appendChild(el);
+  setTimeout(function(){ el.style.opacity = '0'; el.style.transition = 'opacity 0.3s ease'; setTimeout(function(){ el.remove(); }, 300); }, 3000);
 }
 
-function esc(s) {
-  const div = document.createElement('div');
-  div.textContent = s || '';
-  return div.innerHTML;
+// ── API ──
+async function api(path, opts) {
+  opts = opts || {};
+  var isGet = !opts.method || opts.method === 'GET';
+  var headers = opts.headers || {};
+  if (!isGet) headers['Content-Type'] = 'application/json';
+  try {
+    var res = await fetch(path, {
+      method: opts.method || 'GET',
+      headers: headers,
+      body: opts.body ? JSON.stringify(opts.body) : undefined,
+      credentials: 'same-origin',
+    });
+    if (res.status === 401) { showLogin(); throw new Error('Session expired'); }
+    var data = await res.json();
+    if (!res.ok) throw new Error(data.error || data.message || 'Request failed');
+    return data;
+  } catch (e) {
+    if (e.message !== 'Session expired') toast(e.message, 'error');
+    throw e;
+  }
 }
 
 // ── Auth ──
-
 async function checkSession() {
   try {
-    const resp = await api('/api/auth/session');
-    const body = await resp.json();
-    if (body.success && body.data) {
-      document.getElementById('login-overlay').classList.add('hidden');
-      document.getElementById('app').classList.remove('hidden');
-      document.getElementById('user-badge').textContent = body.data.username;
-      loadConfigs();
+    var res = await api('/api/auth/session');
+    if (res.success && res.data) {
+      currentUser = res.data.username;
+      document.getElementById('user-name').textContent = currentUser;
+      showApp();
+      loadCurrentTab();
       return;
     }
-  } catch (e) {
-    // ignore
-  }
+  } catch (_) {}
   showLogin();
 }
 
 function showLogin() {
-  document.getElementById('app').classList.add('hidden');
-  document.getElementById('login-overlay').classList.remove('hidden');
+  document.getElementById('login-overlay').style.display = 'flex';
+  document.getElementById('app-shell').classList.add('hidden');
+  currentUser = null;
+  var params = new URLSearchParams(window.location.search);
+  if (params.get('error') === 'unauthorized') {
+    document.getElementById('login-error').textContent = 'You are not an admin. Please contact the administrator.';
+    document.getElementById('login-error').classList.remove('hidden');
+  }
+}
+
+function showApp() {
+  document.getElementById('login-overlay').style.display = 'none';
+  document.getElementById('app-shell').classList.remove('hidden');
+}
+
+function login() {
+  window.location.href = '/api/auth/github/login';
 }
 
 async function logout() {
-  try {
-    await api('/api/auth/logout', { method: 'POST' });
-  } catch (e) {
-    // ignore
-  }
+  await api('/api/auth/logout', { method: 'POST' });
   showLogin();
 }
 
-// Check for error param on load
-window.addEventListener('DOMContentLoaded', () => {
-  const params = new URLSearchParams(window.location.search);
-  if (params.get('error') === 'unauthorized') {
-    document.getElementById('login-error').textContent = 'You are not an authorized admin user.';
-    document.getElementById('login-error').classList.remove('hidden');
-  }
-  checkSession();
-});
-
-// ── Backend type field toggle ──
-
-function onTypeChange() {
-  const type = document.getElementById('field-type').value;
-  document.getElementById('s3-fields').classList.toggle('hidden', type !== 's3');
-  document.getElementById('dufs-fields').classList.toggle('hidden', type !== 'dufs');
-  document.getElementById('redis-fields').classList.toggle('hidden', type !== 'redis');
-
-  // Update required attributes
-  document.getElementById('field-bucket').required = (type === 's3');
-  document.getElementById('field-access-key').required = (type === 's3');
+// ── Theme ──
+function applyTheme() {
+  var isLight = document.documentElement.classList.contains('light');
+  document.getElementById('theme-icon-sun').classList.toggle('hidden', !isLight);
+  document.getElementById('theme-icon-moon').classList.toggle('hidden', isLight);
 }
 
-// ── Config CRUD ──
+function toggleTheme() {
+  document.documentElement.classList.toggle('light');
+  localStorage.setItem('theme', document.documentElement.classList.contains('light') ? 'light' : 'dark');
+  applyTheme();
+}
 
-let configs = [];
+(function() {
+  var saved = localStorage.getItem('theme');
+  if (saved === 'light') {
+    document.documentElement.classList.add('light');
+  } else {
+    document.documentElement.classList.remove('light');
+  }
+  applyTheme();
+})();
 
+// ── Tabs / Sidebar ──
+function switchTab(tab) {
+  currentTab = tab;
+  // Update sidebar active state
+  document.querySelectorAll('[data-sidebar]').forEach(function(el) {
+    if (el.dataset.sidebar === tab) {
+      el.classList.add('active');
+    } else {
+      el.classList.remove('active');
+    }
+  });
+  // Toggle content sections
+  document.getElementById('tab-configs').classList.toggle('hidden', tab !== 'configs');
+  document.getElementById('tab-tenants').classList.toggle('hidden', tab !== 'tenants');
+  document.getElementById('tab-files').classList.toggle('hidden', tab !== 'files');
+  loadCurrentTab();
+}
+
+function loadCurrentTab() {
+  if (!currentUser) return;
+  if (currentTab === 'configs') loadConfigs();
+  else if (currentTab === 'tenants') loadTenants();
+  else if (currentTab === 'files') loadTenantsForSelect();
+}
+
+// ── Configs CRUD ──
 async function loadConfigs() {
   try {
-    const resp = await api('/api/admin/configs');
-    const body = await resp.json();
-    if (body.success && body.data) {
-      configs = body.data.configs || [];
-      renderConfigs();
-    }
-  } catch (e) {
-    showToast('Failed to load configs', 'error');
-  }
-}
-
-function typeBadge(t) {
-  const colors = {
-    s3: 'bg-orange-900/50 text-orange-300',
-    dufs: 'bg-blue-900/50 text-blue-300',
-    redis: 'bg-red-900/50 text-red-300',
-  };
-  return `<span class="text-xs ${colors[t] || 'bg-gray-800 text-gray-400'} px-1.5 py-0.5 rounded">${t.toUpperCase()}</span>`;
+    var res = await api('/api/admin/configs');
+    configs = (res.data && res.data.configs) || [];
+    renderConfigs();
+  } catch (_) {}
 }
 
 function renderConfigs() {
-  const grid = document.getElementById('config-grid');
-  const empty = document.getElementById('empty-state');
-  const count = document.getElementById('config-count');
-
-  count.textContent = configs.length === 0
-    ? 'No backends'
-    : `${configs.length} backend${configs.length > 1 ? 's' : ''}`;
-
+  var el = document.getElementById('configs-list');
   if (configs.length === 0) {
-    grid.innerHTML = '';
-    empty.classList.remove('hidden');
+    el.innerHTML = '<div class="empty-state"><p class="text-sm">No configs yet</p><p class="text-xs mt-1">Create one to get started</p></div>';
     return;
   }
-
-  empty.classList.add('hidden');
-  grid.innerHTML = configs.map(c => `
-    <div class="bg-gray-900 border border-gray-800 rounded-xl p-5 hover:border-gray-700 transition-colors">
-      <div class="flex items-start justify-between mb-3">
-        <div class="flex-1 min-w-0">
-          <div class="flex items-center gap-2">
-            ${typeBadge(c.backend_type)}
-            <h3 class="font-semibold text-gray-100 truncate">${esc(c.name)}</h3>
-          </div>
-          <p class="text-xs text-gray-500 mt-1.5 truncate">${esc(c.endpoint)}</p>
-        </div>
-      </div>
-      <div class="text-xs text-gray-500 space-y-1 mb-4">
-        ${c.backend_type === 's3' ? `
-        <div class="flex justify-between"><span>Bucket</span> <span class="text-gray-400 truncate ml-2 max-w-[140px]">${esc(c.bucket)}</span></div>
-        <div class="flex justify-between"><span>Region</span> <span class="text-gray-400">${esc(c.region || 'us-east-1')}</span></div>
-        ` : ''}
-        ${c.backend_type === 'redis' && c.db_index != null ? `
-        <div class="flex justify-between"><span>DB</span> <span class="text-gray-400">${c.db_index}</span></div>
-        ` : ''}
-        <div class="flex justify-between"><span>Created</span> <span class="text-gray-400">${new Date(c.created_at * 1000).toLocaleDateString()}</span></div>
-      </div>
-      <div class="flex gap-1.5">
-        <button onclick="testConfig('${c.id}')"
-          class="flex-1 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 py-1.5 rounded transition-colors">
-          Test
-        </button>
-        <button onclick="openEditModal('${c.id}')"
-          class="flex-1 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 py-1.5 rounded transition-colors">
-          Edit
-        </button>
-        <button onclick="deleteConfig('${c.id}')"
-          class="flex-1 text-xs bg-red-900/30 hover:bg-red-900/50 text-red-400 py-1.5 rounded transition-colors">
-          Delete
-        </button>
-      </div>
-    </div>
-  `).join('');
+  el.innerHTML = configs.map(function(c) {
+    return '<div class="card card-hover p-4 flex items-center justify-between">' +
+      '<div class="flex items-center gap-4">' +
+        '<div>' + badge(c.backend_type) + '</div>' +
+        '<div>' +
+          '<p class="text-sm font-medium">' + esc(c.name) + '</p>' +
+          '<p class="text-xs opacity-40">' + esc(c.endpoint) + (c.bucket ? ' / ' + esc(c.bucket) : '') + '</p>' +
+        '</div>' +
+      '</div>' +
+      '<div class="flex items-center gap-1">' +
+        '<button class="btn btn-ghost btn-sm text-xs" onclick="testConfig(\'' + c.id + '\')">Test</button>' +
+        '<button class="btn btn-ghost btn-sm text-xs" onclick="editConfig(\'' + c.id + '\')">Edit</button>' +
+        '<button class="btn btn-ghost btn-sm text-xs" style="color:var(--danger)" onclick="deleteConfig(\'' + c.id + '\',\'' + esc(c.name) + '\')">Delete</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
 }
 
-// ── Modal ──
-
-function openCreateModal() {
-  document.getElementById('modal-title').textContent = 'Add Backend';
-  document.getElementById('edit-id').value = '';
-  document.getElementById('config-form').reset();
-  document.getElementById('field-type').value = 's3';
-  onTypeChange();
-  document.getElementById('config-modal').classList.remove('hidden');
-  document.getElementById('config-modal').classList.add('flex');
+function openConfigModal() {
+  document.getElementById('config-modal-title').textContent = 'New Config';
+  document.getElementById('cfg-id').value = '';
+  document.getElementById('cfg-name').value = '';
+  document.getElementById('cfg-type').value = 's3';
+  document.getElementById('cfg-endpoint').value = '';
+  document.getElementById('cfg-region').value = '';
+  document.getElementById('cfg-bucket').value = '';
+  document.getElementById('cfg-access-key-id').value = '';
+  document.getElementById('cfg-secret-access-key').value = '';
+  document.getElementById('cfg-force-path-style').checked = false;
+  document.getElementById('cfg-dufs-username').value = '';
+  document.getElementById('cfg-dufs-password').value = '';
+  document.getElementById('cfg-redis-password').value = '';
+  document.getElementById('cfg-db-index').value = '';
+  document.getElementById('cfg-oss-preview-url').value = '';
+  document.getElementById('cfg-oss-preview-cookie').value = '';
+  onConfigTypeChange();
+  document.getElementById('config-modal').style.display = 'flex';
 }
 
-async function openEditModal(id) {
-  try {
-    const resp = await api(`/api/admin/configs/${id}`);
-    const body = await resp.json();
-    if (!body.success || !body.data) return showToast('Failed to load config', 'error');
-
-    const c = body.data;
-    document.getElementById('modal-title').textContent = 'Edit Backend';
-    document.getElementById('edit-id').value = c.id;
-    document.getElementById('field-type').value = c.backend_type;
-    document.getElementById('field-name').value = c.name;
-    document.getElementById('field-endpoint').value = c.endpoint;
-
-    // S3 fields
-    document.getElementById('field-region').value = c.region || '';
-    document.getElementById('field-bucket').value = c.bucket || '';
-    document.getElementById('field-access-key').value = c.access_key_id || '';
-    document.getElementById('field-secret-key').value = '';
-    document.getElementById('field-force-path').checked = c.force_path_style;
-
-    // Dufs fields
-    document.getElementById('field-dufs-user').value = c.username || '';
-    document.getElementById('field-dufs-pass').value = '';
-
-    // Redis fields
-    document.getElementById('field-redis-pass').value = '';
-    document.getElementById('field-db-index').value = c.db_index != null ? c.db_index : '';
-
-    onTypeChange();
-    document.getElementById('config-modal').classList.remove('hidden');
-    document.getElementById('config-modal').classList.add('flex');
-  } catch (e) {
-    showToast('Failed to load config', 'error');
-  }
+function editConfig(id) {
+  var c = configs.find(function(x) { return x.id === id; });
+  if (!c) return;
+  api('/api/admin/configs/' + id).then(function(res) {
+    var full = res.data || c;
+    document.getElementById('config-modal-title').textContent = 'Edit Config';
+    document.getElementById('cfg-id').value = full.id;
+    document.getElementById('cfg-name').value = full.name || '';
+    document.getElementById('cfg-type').value = full.backend_type || 's3';
+    document.getElementById('cfg-endpoint').value = full.endpoint || '';
+    document.getElementById('cfg-region').value = full.region || '';
+    document.getElementById('cfg-bucket').value = full.bucket || '';
+    document.getElementById('cfg-access-key-id').value = full.access_key_id || '';
+    document.getElementById('cfg-secret-access-key').value = '';
+    document.getElementById('cfg-secret-access-key').placeholder = '(unchanged)';
+    document.getElementById('cfg-force-path-style').checked = full.force_path_style || false;
+    document.getElementById('cfg-dufs-username').value = full.username || '';
+    document.getElementById('cfg-dufs-password').value = '';
+    document.getElementById('cfg-dufs-password').placeholder = '(unchanged)';
+    document.getElementById('cfg-redis-password').value = '';
+    document.getElementById('cfg-redis-password').placeholder = '(unchanged)';
+    document.getElementById('cfg-db-index').value = full.db_index != null ? full.db_index : '';
+    document.getElementById('cfg-oss-preview-url').value = full.oss_preview_rpc_url || '';
+    document.getElementById('cfg-oss-preview-cookie').value = full.oss_preview_cookie || '';
+    onConfigTypeChange();
+    document.getElementById('config-modal').style.display = 'flex';
+  }).catch(function(){});
 }
 
-function closeModal() {
-  document.getElementById('config-modal').classList.add('hidden');
-  document.getElementById('config-modal').classList.remove('flex');
+function closeConfigModal() {
+  document.getElementById('config-modal').style.display = 'none';
+}
+
+function onConfigTypeChange() {
+  var t = document.getElementById('cfg-type').value;
+  document.querySelectorAll('.cfg-s3').forEach(function(el){ el.classList.toggle('hidden', t !== 's3'); });
+  document.querySelectorAll('.cfg-dufs').forEach(function(el){ el.classList.toggle('hidden', t !== 'dufs'); });
+  document.querySelectorAll('.cfg-redis').forEach(function(el){ el.classList.toggle('hidden', t !== 'redis'); });
 }
 
 async function saveConfig(e) {
   e.preventDefault();
-  const editId = document.getElementById('edit-id').value;
-  const backendType = document.getElementById('field-type').value;
-
-  const data = {
-    name: document.getElementById('field-name').value.trim(),
-    backend_type: backendType,
-    endpoint: document.getElementById('field-endpoint').value.trim(),
+  var id = document.getElementById('cfg-id').value;
+  var type = document.getElementById('cfg-type').value;
+  var body = {
+    name: document.getElementById('cfg-name').value,
+    backend_type: type,
+    endpoint: document.getElementById('cfg-endpoint').value,
   };
-
-  if (backendType === 's3') {
-    data.region = document.getElementById('field-region').value.trim();
-    data.bucket = document.getElementById('field-bucket').value.trim();
-    data.access_key_id = document.getElementById('field-access-key').value.trim();
-    data.secret_access_key = document.getElementById('field-secret-key').value.trim();
-    data.force_path_style = document.getElementById('field-force-path').checked;
-    if (editId && !data.secret_access_key) delete data.secret_access_key;
+  if (type === 's3') {
+    body.region = document.getElementById('cfg-region').value;
+    body.bucket = document.getElementById('cfg-bucket').value;
+    body.access_key_id = document.getElementById('cfg-access-key-id').value;
+    var sak = document.getElementById('cfg-secret-access-key').value;
+    if (sak) body.secret_access_key = sak;
+    body.force_path_style = document.getElementById('cfg-force-path-style').checked;
+    body.oss_preview_rpc_url = document.getElementById('cfg-oss-preview-url').value;
+    body.oss_preview_cookie = document.getElementById('cfg-oss-preview-cookie').value;
   }
-
-  if (backendType === 'dufs') {
-    data.username = document.getElementById('field-dufs-user').value.trim() || null;
-    data.password = document.getElementById('field-dufs-pass').value.trim() || null;
-    if (editId && !data.password) delete data.password;
+  if (type === 'dufs') {
+    body.username = document.getElementById('cfg-dufs-username').value || null;
+    var dp = document.getElementById('cfg-dufs-password').value;
+    if (dp) body.password = dp;
   }
-
-  if (backendType === 'redis') {
-    data.redis_password = document.getElementById('field-redis-pass').value.trim() || null;
-    const dbIdx = document.getElementById('field-db-index').value.trim();
-    data.db_index = dbIdx ? parseInt(dbIdx, 10) : null;
-    if (editId && !data.redis_password) delete data.redis_password;
+  if (type === 'redis') {
+    var rp = document.getElementById('cfg-redis-password').value;
+    if (rp) body.redis_password = rp;
+    var dbi = document.getElementById('cfg-db-index').value;
+    if (dbi !== '') body.db_index = parseInt(dbi);
   }
-
   try {
-    const method = editId ? 'PUT' : 'POST';
-    const url = editId ? `/api/admin/configs/${editId}` : '/api/admin/configs';
-    const resp = await api(url, { method, body: JSON.stringify(data) });
-    const body = await resp.json();
-    if (resp.ok && body.success) {
-      showToast(editId ? 'Backend updated' : 'Backend created', 'success');
-      closeModal();
-      loadConfigs();
+    if (id) {
+      await api('/api/admin/configs/' + id, { method: 'PUT', body: body });
+      toast('Config updated', 'success');
     } else {
-      showToast(body.error || 'Operation failed', 'error');
+      await api('/api/admin/configs', { method: 'POST', body: body });
+      toast('Config created', 'success');
     }
-  } catch (e) {
-    showToast('Request failed', 'error');
-  }
+    closeConfigModal();
+    loadConfigs();
+  } catch (_) {}
 }
 
-async function deleteConfig(id) {
-  const cfg = configs.find(c => c.id === id);
-  if (!confirm(`Delete "${cfg?.name || id}"?\nThis cannot be undone.`)) return;
-
-  try {
-    const resp = await api(`/api/admin/configs/${id}`, { method: 'DELETE' });
-    const body = await resp.json();
-    if (resp.ok && body.success) {
-      showToast('Backend deleted', 'success');
+function deleteConfig(id, name) {
+  openDelete('Delete config "' + name + '"?', async function() {
+    try {
+      await api('/api/admin/configs/' + id, { method: 'DELETE' });
+      toast('Config deleted', 'success');
+      closeDeleteModal();
       loadConfigs();
-    } else {
-      showToast(body.error || 'Delete failed', 'error');
-    }
-  } catch (e) {
-    showToast('Request failed', 'error');
-  }
+    } catch (_) {}
+  });
 }
-
-// ── Test Connection ──
 
 async function testConfig(id) {
-  const cfg = configs.find(c => c.id === id);
-  showToast(`Testing ${cfg?.name || id}...`, 'info');
-
+  var c = configs.find(function(x) { return x.id === id; });
+  if (!c) return;
   try {
-    const resp = await api(`/api/admin/configs/${id}/test`, { method: 'POST' });
-    const body = await resp.json();
-    if (body.success && body.data) {
-      const result = body.data;
-      if (result.ok) {
-        showToast('Connected: ' + result.message, 'success');
-      } else {
-        showToast('Failed: ' + result.message, 'error');
-      }
-    }
+    var res = await api('/api/admin/configs/' + id + '/test', { method: 'POST' });
+    toast(res.data && res.data.message ? res.data.message : 'Connection OK', 'success');
+  } catch (_) {}
+}
+
+// ── Tenants CRUD ──
+async function loadTenants() {
+  try {
+    var res = await api('/api/admin/tenants');
+    var list = res.data;
+    tenants = Array.isArray(list) ? list : (list && list.tenants || []);
+    renderTenants();
   } catch (e) {
-    showToast('Test request failed', 'error');
+    console.error('loadTenants:', e);
+    document.getElementById('tenants-list').innerHTML = '<div class="empty-state"><p class="text-sm">Failed to load tenants</p><p class="text-xs mt-1">' + esc(e.message) + '</p></div>';
   }
 }
+
+function renderTenants() {
+  var el = document.getElementById('tenants-list');
+  if (tenants.length === 0) {
+    el.innerHTML = '<div class="empty-state"><p class="text-sm">No tenants yet</p><p class="text-xs mt-1">Create one to get started</p></div>';
+    return;
+  }
+  el.innerHTML = tenants.map(function(t) {
+    var usagePct = t.max_storage_bytes > 0 ? Math.min(100, (t.storage_used_bytes / t.max_storage_bytes) * 100) : 0;
+    var reqPct = t.max_requests_per_day > 0 ? Math.min(100, (t.requests_used_today / t.max_requests_per_day) * 100) : 0;
+    return '<div class="card card-hover p-4">' +
+      '<div class="flex items-center justify-between mb-3">' +
+        '<div class="flex items-center gap-3">' +
+          '<p class="text-sm font-medium">' + esc(t.name) + '</p>' +
+          (t.is_active ? '<span class="badge badge-active">Active</span>' : '<span class="badge badge-inactive">Inactive</span>') +
+        '</div>' +
+        '<div class="flex items-center gap-1">' +
+          '<button class="btn btn-ghost btn-sm text-xs" onclick="editTenant(\'' + t.id + '\')">Edit</button>' +
+          '<button class="btn btn-ghost btn-sm text-xs" style="color:var(--danger)" onclick="deleteTenant(\'' + t.id + '\',\'' + esc(t.name) + '\')">Delete</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">' +
+        '<div><span class="opacity-40">API Key</span><p class="mt-0.5 font-mono text-xs truncate">' + esc(t.api_key) + '</p></div>' +
+        '<div><span class="opacity-40">Storage</span><p class="mt-0.5">' + fmt(t.storage_used_bytes) + ' / ' + fmt(t.max_storage_bytes) + '</p>' +
+          '<div class="mt-1 h-1 rounded-full" style="background:var(--input-bg)"><div class="progress-fill h-full rounded-full" style="width:' + usagePct + '%;background:' + (usagePct > 80 ? 'var(--danger)' : 'var(--success)') + '"></div></div>' +
+        '</div>' +
+        '<div><span class="opacity-40">Requests Today</span><p class="mt-0.5">' + t.requests_used_today + ' / ' + t.max_requests_per_day + '</p>' +
+          '<div class="mt-1 h-1 rounded-full" style="background:var(--input-bg)"><div class="progress-fill h-full rounded-full" style="width:' + reqPct + '%;background:' + (reqPct > 80 ? 'var(--danger)' : 'var(--success)') + '"></div></div>' +
+        '</div>' +
+        '<div><span class="opacity-40">Created</span><p class="mt-0.5">' + fmtTs(t.created_at) + '</p></div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+async function openTenantModal() {
+  document.getElementById('tenant-modal-title').textContent = 'New Tenant';
+  document.getElementById('tnt-id').value = '';
+  document.getElementById('tnt-name').value = '';
+  document.getElementById('tnt-max-requests').value = '10000';
+  document.getElementById('tnt-max-storage').value = '10737418240';
+  document.getElementById('tnt-is-active').checked = true;
+  document.getElementById('tnt-active-group').style.display = 'none';
+  await populateBackendConfigSelect();
+  document.getElementById('tenant-modal').style.display = 'flex';
+}
+
+async function editTenant(id) {
+  try {
+    var res = await api('/api/admin/tenants/' + id);
+    var t = res.data && res.data.tenant ? res.data.tenant : res.data;
+    document.getElementById('tenant-modal-title').textContent = 'Edit Tenant';
+    document.getElementById('tnt-id').value = t.id;
+    document.getElementById('tnt-name').value = t.name || '';
+    document.getElementById('tnt-max-requests').value = t.max_requests_per_day;
+    document.getElementById('tnt-max-storage').value = t.max_storage_bytes;
+    document.getElementById('tnt-is-active').checked = t.is_active;
+    document.getElementById('tnt-active-group').style.display = 'flex';
+    await populateBackendConfigSelect(t.default_backend_config_id);
+    document.getElementById('tenant-modal').style.display = 'flex';
+  } catch (_) {}
+}
+
+function closeTenantModal() {
+  document.getElementById('tenant-modal').style.display = 'none';
+}
+
+async function populateBackendConfigSelect(selectedId) {
+  try {
+    var res = await api('/api/admin/configs');
+    var list = (res.data && res.data.configs) || [];
+    var sel = document.getElementById('tnt-backend-config');
+    sel.innerHTML = list.map(function(c) {
+      return '<option value="' + c.id + '"' + (c.id === selectedId ? ' selected' : '') + '>' + esc(c.name) + ' (' + c.backend_type.toUpperCase() + ')</option>';
+    }).join('');
+    if (list.length === 0) {
+      sel.innerHTML = '<option value="">No configs available</option>';
+    }
+  } catch (_) {}
+}
+
+async function saveTenant(e) {
+  e.preventDefault();
+  var id = document.getElementById('tnt-id').value;
+  var body = {
+    name: document.getElementById('tnt-name').value,
+    default_backend_config_id: document.getElementById('tnt-backend-config').value,
+    max_requests_per_day: parseInt(document.getElementById('tnt-max-requests').value) || 0,
+    max_storage_bytes: parseInt(document.getElementById('tnt-max-storage').value) || 0,
+  };
+  if (id) {
+    body.is_active = document.getElementById('tnt-is-active').checked;
+  }
+  try {
+    if (id) {
+      await api('/api/admin/tenants/' + id, { method: 'PUT', body: body });
+      toast('Tenant updated', 'success');
+    } else {
+      await api('/api/admin/tenants', { method: 'POST', body: body });
+      toast('Tenant created', 'success');
+    }
+    closeTenantModal();
+    loadTenants();
+  } catch (_) {}
+}
+
+function deleteTenant(id, name) {
+  openDelete('Delete tenant "' + name + '"?', async function() {
+    try {
+      await api('/api/admin/tenants/' + id, { method: 'DELETE' });
+      toast('Tenant deleted', 'success');
+      closeDeleteModal();
+      loadTenants();
+    } catch (_) {}
+  });
+}
+
+// ── Files ──
+async function loadTenantsForSelect() {
+  try {
+    var res = await api('/api/admin/tenants');
+    // API returns data as a plain array, not { tenants: [...] }
+    var list = Array.isArray(res.data) ? res.data : [];
+    var sel = document.getElementById('files-tenant-select');
+    var cur = sel.value;
+    sel.innerHTML = '<option value="">-- Select a tenant --</option>' +
+      list.map(function(t) {
+        return '<option value="' + t.id + '"' + (t.id === cur ? ' selected' : '') + '>' + esc(t.name) + '</option>';
+      }).join('');
+    if (cur) loadFiles();
+  } catch (_) {}
+}
+
+async function loadFiles() {
+  var tenantId = document.getElementById('files-tenant-select').value;
+  var el = document.getElementById('files-table-container');
+  if (!tenantId) {
+    el.innerHTML = '<div class="empty-state"><p class="text-sm">Select a tenant to view files</p></div>';
+    return;
+  }
+  try {
+    var res = await api('/api/admin/tenants/' + tenantId + '/files');
+    var files = (res.data && res.data.files) || [];
+    if (files.length === 0) {
+      el.innerHTML = '<div class="empty-state"><p class="text-sm">No files for this tenant</p></div>';
+      return;
+    }
+    el.innerHTML = '<div class="card overflow-hidden"><table class="w-full text-sm"><thead><tr class="border-b hairline text-xs opacity-40">' +
+      '<th class="text-left py-3 px-4 font-medium">File Key</th>' +
+      '<th class="text-left py-3 px-4 font-medium">Original Name</th>' +
+      '<th class="text-left py-3 px-4 font-medium">Type</th>' +
+      '<th class="text-right py-3 px-4 font-medium">Size</th>' +
+      '<th class="text-left py-3 px-4 font-medium">Backend</th>' +
+      '<th class="text-right py-3 px-4 font-medium">Created</th>' +
+      '</tr></thead><tbody>' +
+      files.map(function(f) {
+        return '<tr class="row-hover border-b hairline">' +
+          '<td class="py-2.5 px-4 font-mono text-xs max-w-[200px] truncate">' + esc(f.file_key) + '</td>' +
+          '<td class="py-2.5 px-4 max-w-[150px] truncate">' + esc(f.original_name || '—') + '</td>' +
+          '<td class="py-2.5 px-4 text-xs opacity-50">' + esc(f.mime_type || '—') + '</td>' +
+          '<td class="py-2.5 px-4 text-right font-mono text-xs">' + fmt(f.size_bytes) + '</td>' +
+          '<td class="py-2.5 px-4">' + badge(f.backend_type) + '</td>' +
+          '<td class="py-2.5 px-4 text-right text-xs opacity-50">' + fmtTs(f.created_at) + '</td>' +
+          '</tr>';
+      }).join('') +
+      '</tbody></table></div>';
+  } catch (_) {
+    el.innerHTML = '<div class="empty-state"><p class="text-sm">Failed to load files</p></div>';
+  }
+}
+
+// ── Delete modal ──
+var deleteCallback = null;
+function openDelete(msg, cb) {
+  document.getElementById('delete-message').textContent = msg;
+  deleteCallback = cb;
+  document.getElementById('delete-confirm-btn').onclick = cb;
+  document.getElementById('delete-modal').style.display = 'flex';
+}
+function closeDeleteModal() {
+  document.getElementById('delete-modal').style.display = 'none';
+  deleteCallback = null;
+}
+
+// ── Escape key ──
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    closeConfigModal();
+    closeTenantModal();
+    closeDeleteModal();
+  }
+});
+
+// ── Util ──
+function esc(s) {
+  if (!s) return '';
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Init ──
+checkSession();
 </script>
 </body>
 </html>

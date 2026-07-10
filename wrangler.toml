@@ -16,6 +16,11 @@ preview_id = "d633d4280dca44d3a03eb93728039bd2"
 # GITHUB_REDIRECT_URI
 # JWT_SECRET
 
+[[d1_databases]]
+binding = "BENDY_FS_DB"
+database_name = "bendy-fs-db"
+database_id = "be1939fd-eda9-4d7a-8434-e02176742152"
+
 [observability]
 enabled = true
 head_sampling_rate = 1

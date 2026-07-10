@@ -41,3 +41,27 @@ pub fn verify_admin(req: &Request, env: &Env) -> Result<()> {
 
     Ok(())
 }
+
+/// Verify admin access and return the username (for audit logging).
+/// Returns "admin_token" when using legacy ADMIN_TOKEN auth.
+pub fn verify_admin_with_username(req: &Request, env: &Env) -> Result<String> {
+    match github_oauth::verify_session(req, env) {
+        Ok(username) => return Ok(username),
+        Err(_) => {}
+    }
+
+    // Fallback to legacy ADMIN_TOKEN
+    let expected = env.secret("ADMIN_TOKEN")?.to_string();
+    if expected.is_empty() {
+        return Err(worker::Error::RustError(
+            "ADMIN_TOKEN secret is not set.".into(),
+        ));
+    }
+    let token = extract_token(req).ok_or_else(|| {
+        worker::Error::RustError("Missing Authorization header".into())
+    })?;
+    if token != expected {
+        return Err(worker::Error::RustError("Invalid admin token".into()));
+    }
+    Ok("admin_token".to_string())
+}

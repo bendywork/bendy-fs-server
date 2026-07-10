@@ -3,11 +3,14 @@ use worker::*;
 mod admin_handlers;
 mod auth;
 mod config_store;
+mod db;
 mod dufs_proxy;
 mod github_oauth;
 mod redis_proxy;
 mod s3_proxy;
 mod s3_signer;
+mod tenant_auth;
+mod tenant_handlers;
 mod types;
 
 fn cors_response() -> Result<Response> {
@@ -30,6 +33,7 @@ fn add_cors(resp: &mut Response) {
 }
 
 /// Helper: build a response and add CORS
+/// force rebuild v3 - sidebar layout + fix tenant select
 fn ok_with_cors<T: serde::Serialize>(data: T, status: u16) -> Result<Response> {
     let mut resp = Response::from_json(&data)?;
     add_cors(&mut resp);
@@ -39,6 +43,8 @@ fn ok_with_cors<T: serde::Serialize>(data: T, status: u16) -> Result<Response> {
 #[event(fetch)]
 pub async fn main(req: Request, env: Env, _ctx: worker::Context) -> Result<Response> {
     console_error_panic_hook::set_once();
+
+    db::ensure_schema(&env).await?;
 
     let router = Router::new();
 
@@ -66,6 +72,56 @@ pub async fn main(req: Request, env: Env, _ctx: worker::Context) -> Result<Respo
         })
         .post_async("/api/auth/logout", |_req, _ctx| async move {
             let mut resp = github_oauth::handle_logout().await?;
+            add_cors(&mut resp);
+            Ok(resp)
+        })
+        // ── Tenant auth ──
+        .post_async("/api/t/auth", |req, ctx| async move {
+            let mut resp = tenant_auth::handle_tenant_login(req, &ctx.env).await?;
+            add_cors(&mut resp);
+            Ok(resp)
+        })
+        // ── Tenant proxy routes ──
+        .post_async("/api/t/upload", |req, ctx| async move {
+            let mut resp = tenant_handlers::handle_tenant_upload(req, &ctx.env).await?;
+            add_cors(&mut resp);
+            Ok(resp)
+        })
+        .post_async("/api/t/presign-upload", |req, ctx| async move {
+            let mut resp = tenant_handlers::handle_tenant_presign_upload(req, &ctx.env).await?;
+            add_cors(&mut resp);
+            Ok(resp)
+        })
+        .post_async("/api/t/presign-download", |req, ctx| async move {
+            let mut resp = tenant_handlers::handle_tenant_presign_download(req, &ctx.env).await?;
+            add_cors(&mut resp);
+            Ok(resp)
+        })
+        .get_async("/api/t/download/*key", |req, ctx| async move {
+            if let Some(key) = ctx.param("key") {
+                let mut resp = tenant_handlers::handle_tenant_download(req, &ctx.env, key).await?;
+                add_cors(&mut resp);
+                Ok(resp)
+            } else {
+                Response::error("Missing key", 400)
+            }
+        })
+        .delete_async("/api/t/delete/*key", |req, ctx| async move {
+            if let Some(key) = ctx.param("key") {
+                let mut resp = tenant_handlers::handle_tenant_delete(req, &ctx.env, key).await?;
+                add_cors(&mut resp);
+                Ok(resp)
+            } else {
+                Response::error("Missing key", 400)
+            }
+        })
+        .get_async("/api/t/files", |req, ctx| async move {
+            let mut resp = tenant_handlers::handle_tenant_list_files(req, &ctx.env).await?;
+            add_cors(&mut resp);
+            Ok(resp)
+        })
+        .post_async("/api/t/oss-preview", |req, ctx| async move {
+            let mut resp = tenant_handlers::handle_tenant_oss_preview(req, &ctx.env).await?;
             add_cors(&mut resp);
             Ok(resp)
         })
@@ -113,6 +169,69 @@ pub async fn main(req: Request, env: Env, _ctx: worker::Context) -> Result<Respo
             } else {
                 Response::error("Missing config id", 400)
             }
+        })
+        // ── Admin: tenant CRUD ──
+        .get_async("/api/admin/tenants", |req, ctx| async move {
+            let mut resp = admin_handlers::handle_list_tenants(req, &ctx.env).await?;
+            add_cors(&mut resp);
+            Ok(resp)
+        })
+        .post_async("/api/admin/tenants", |req, ctx| async move {
+            let mut resp = admin_handlers::handle_create_tenant(req, &ctx.env).await?;
+            add_cors(&mut resp);
+            Ok(resp)
+        })
+        .get_async("/api/admin/tenants/:id", |req, ctx| async move {
+            if let Some(id) = ctx.param("id") {
+                let mut resp = admin_handlers::handle_get_tenant(req, &ctx.env, id).await?;
+                add_cors(&mut resp);
+                Ok(resp)
+            } else {
+                Response::error("Missing tenant id", 400)
+            }
+        })
+        .put_async("/api/admin/tenants/:id", |req, ctx| async move {
+            if let Some(id) = ctx.param("id") {
+                let mut resp = admin_handlers::handle_update_tenant(req, &ctx.env, id).await?;
+                add_cors(&mut resp);
+                Ok(resp)
+            } else {
+                Response::error("Missing tenant id", 400)
+            }
+        })
+        .delete_async("/api/admin/tenants/:id", |req, ctx| async move {
+            if let Some(id) = ctx.param("id") {
+                let mut resp = admin_handlers::handle_delete_tenant(req, &ctx.env, id).await?;
+                add_cors(&mut resp);
+                Ok(resp)
+            } else {
+                Response::error("Missing tenant id", 400)
+            }
+        })
+        .get_async("/api/admin/tenants/:id/files", |req, ctx| async move {
+            if let Some(id) = ctx.param("id") {
+                let mut resp = admin_handlers::handle_list_tenant_files(req, &ctx.env, id).await?;
+                add_cors(&mut resp);
+                Ok(resp)
+            } else {
+                Response::error("Missing tenant id", 400)
+            }
+        })
+        // ── Admin: dashboard / health / audit ──
+        .get_async("/api/admin/stats", |req, ctx| async move {
+            let mut resp = admin_handlers::handle_stats(req, &ctx.env).await?;
+            add_cors(&mut resp);
+            Ok(resp)
+        })
+        .get_async("/api/admin/health", |req, ctx| async move {
+            let mut resp = admin_handlers::handle_health(req, &ctx.env).await?;
+            add_cors(&mut resp);
+            Ok(resp)
+        })
+        .get_async("/api/admin/audit-logs", |req, ctx| async move {
+            let mut resp = admin_handlers::handle_audit_logs(req, &ctx.env).await?;
+            add_cors(&mut resp);
+            Ok(resp)
         })
         // ── FS unified proxy routes ──
         .post_async("/api/fs/:id/presign-upload", |req, ctx| async move {
