@@ -230,15 +230,23 @@ pub struct Tenant {
     #[serde(skip_serializing)]
     pub api_secret: String,
     pub default_backend_config_id: String,
+    #[serde(default)]
     pub max_requests_per_day: i64,
+    #[serde(default)]
     pub max_storage_bytes: i64,
+    #[serde(default)]
     pub requests_used_today: i64,
+    #[serde(default)]
     pub storage_used_bytes: i64,
+    #[serde(default)]
     pub last_request_date: String,
+    #[serde(default = "default_active")]
     pub is_active: i64,
     pub created_at: u64,
     pub updated_at: u64,
 }
+
+fn default_active() -> i64 { 1 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FileRecord {

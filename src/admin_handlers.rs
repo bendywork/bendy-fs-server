@@ -398,7 +398,15 @@ fn generate_api_secret() -> String {
 /// GET /api/admin/tenants
 pub async fn handle_list_tenants(req: Request, env: &Env) -> Result<Response> {
     require_admin!(&req, env);
-    let tenants = db::list_tenants(env).await?;
+    let tenants = match db::list_tenants(env).await {
+        Ok(t) => t,
+        Err(e) => {
+            return Ok(Response::from_json(&ApiResponse::<()>::err(
+                &format!("{}", e),
+                "INTERNAL_ERROR",
+            ))?.with_status(500));
+        }
+    };
     Response::from_json(&ApiResponse::ok(tenants))
 }
 

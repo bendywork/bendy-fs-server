@@ -20,6 +20,7 @@ pub async fn list_tenants(env: &Env) -> Result<Vec<Tenant>> {
     let d = db(env)?;
     let result = d.prepare("SELECT * FROM tenants ORDER BY created_at DESC").all().await?;
     result.results::<Tenant>()
+        .map_err(|e| worker::Error::RustError(format!("Failed to deserialize tenants: {}", e)))
 }
 
 pub async fn get_tenant(env: &Env, tenant_id: &str) -> Result<Option<Tenant>> {
