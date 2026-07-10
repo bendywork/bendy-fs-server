@@ -1,7 +1,6 @@
 # plan.md - Bendy FS Server
 
-- [x] Phase 3: Rewrite admin.html — sidebar sections, dashboard, health probes, audit logs, i18n ✅ 2026-07-10 (in progress, uncommitted)
-- [ ] Phase 3 remaining: sidebar collapsible categories, user card, dashboard stats, health probe, audit logs pagination, i18n
+- [x] Phase 3: Rewrite admin.html — sidebar sections, dashboard, health probes, audit logs, i18n ✅ 2026-07-10
 - [ ] Add tenant file preview/delete in admin panel
 - [ ] Add tenant rate-limit bypass for admin
 - [ ] Rename directory from bendy-s3-server to bendy-fs-server
@@ -108,6 +107,6 @@ Single-file `static/admin.html` (~3000 lines) with Tailwind CDN + vanilla JS, pr
 - i18n: setLang(lang) re-renders visible text
 
 ### Verification
-1. Build: `cargo build --release --target wasm32-unknown-unknown`
+1. Build: `wasm-pack build --target web --out-dir build --no-opt`
 2. Run: `wrangler dev`
 3. Test: login → dashboard → all tabs → CRUD → health probes → audit logs → i18n → theme → logout

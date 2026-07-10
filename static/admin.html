@@ -12,6 +12,7 @@
       extend: {
         fontFamily: {
           sans: ['-apple-system', 'BlinkMacSystemFont', 'SF Pro Display', 'SF Pro Text', 'sans-serif'],
+          mono: ['SF Mono', 'JetBrains Mono', 'ui-monospace', 'monospace'],
         },
       },
     },
@@ -171,6 +172,21 @@
   .sidebar-icon { width: 18px; height: 18px; opacity: 0.5; flex-shrink: 0; }
   .sidebar-item.active .sidebar-icon { opacity: 0.8; }
 
+  .sidebar-category {
+    display: flex; align-items: center; gap: 6px;
+    padding: 8px 14px; margin: 4px 8px 2px;
+    font-size: 10px; font-weight: 600; letter-spacing: 0.06em;
+    color: var(--text-secondary); opacity: 0.5;
+    cursor: pointer; user-select: none;
+    text-transform: uppercase;
+  }
+  .sidebar-category:hover { opacity: 0.7; }
+  .sidebar-category .chevron {
+    width: 12px; height: 12px; transition: transform 0.2s ease;
+  }
+  .sidebar-category.collapsed .chevron { transform: rotate(-90deg); }
+  .sidebar-category.collapsed + .sidebar-items { display: none; }
+
   .progress-fill { transition: width 0.4s ease; }
 
   tr.row-hover { transition: background 0.15s ease; }
@@ -195,6 +211,54 @@
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     padding: 48px 24px; color: var(--text-secondary);
   }
+
+  .stat-card {
+    background: var(--glass);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px 24px;
+    transition: transform 0.2s ease, background 0.2s ease;
+  }
+  .stat-card:hover { transform: translateY(-2px); background: var(--glass-hover); }
+  .stat-icon {
+    width: 32px; height: 32px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 12px;
+  }
+
+  .health-dot {
+    width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+  }
+  .health-ok { background: var(--success); box-shadow: 0 0 6px var(--success); }
+  .health-err { background: var(--danger); box-shadow: 0 0 6px var(--danger); }
+  .health-pending { background: var(--warning); box-shadow: 0 0 6px var(--warning); }
+
+  .user-card {
+    border-top: 1px solid var(--border);
+    padding: 12px 16px; margin-top: auto;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .user-avatar {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--input-bg);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 600; flex-shrink: 0;
+  }
+
+  .pagination-btn {
+    padding: 5px 12px; border-radius: 6px; font-size: 12px; cursor: pointer;
+    background: var(--input-bg); color: var(--text-secondary);
+    border: 1px solid var(--border);
+    transition: all 0.15s ease;
+  }
+  .pagination-btn:hover:not(:disabled) { color: var(--text); background: var(--glass-hover); }
+  .pagination-btn:disabled { opacity: 0.3; cursor: default; }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+  .probing { animation: pulse 1.2s ease-in-out infinite; }
 </style>
 </head>
 <body class="h-screen overflow-hidden">
@@ -208,10 +272,10 @@
   <div class="relative glass border hairline rounded-2xl p-10 w-full max-w-sm text-center modal-panel">
     <svg class="w-12 h-12 mx-auto mb-4 opacity-40" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
     <h2 class="text-xl font-semibold mb-2">Bendy FS Server</h2>
-    <p class="text-sm opacity-50 mb-8">Sign in with your GitHub account to continue</p>
+    <p class="text-sm opacity-50 mb-8" id="login-subtitle">Sign in with your GitHub account to continue</p>
     <button id="login-btn" class="btn btn-primary w-full py-3 text-sm" onclick="login()">
       <svg class="w-5 h-5 mr-2" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
-      Sign in with GitHub
+      <span id="login-btn-text">Sign in with GitHub</span>
     </button>
     <p id="login-error" class="text-sm text-red-400 mt-4 hidden"></p>
   </div>
@@ -226,13 +290,16 @@
         <h1 class="text-sm font-semibold tracking-wide">Bendy FS Server</h1>
         <span class="text-xs opacity-30">Admin</span>
       </div>
-      <div class="flex items-center gap-3">
-        <span id="user-name" class="text-xs opacity-50"></span>
+      <div class="flex items-center gap-2">
+        <!-- i18n toggle -->
+        <button id="lang-toggle" class="btn btn-ghost btn-sm text-xs font-medium w-8 h-8 p-0 rounded-full" onclick="toggleLang()" title="Toggle language">
+          <span id="lang-label">EN</span>
+        </button>
+        <!-- Theme toggle -->
         <button id="theme-toggle" class="btn btn-ghost btn-sm w-8 h-8 p-0 rounded-full" onclick="toggleTheme()" title="Toggle theme">
           <svg id="theme-icon-sun" class="w-4 h-4 hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
           <svg id="theme-icon-moon" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
         </button>
-        <button class="btn btn-ghost btn-sm text-xs" onclick="logout()">Sign Out</button>
       </div>
     </div>
   </header>
@@ -241,32 +308,114 @@
   <div class="flex flex-1 overflow-hidden">
 
     <!-- Sidebar -->
-    <aside class="glass border-r hairline w-52 flex-shrink-0 flex flex-col py-3">
-      <div class="sidebar-item active" data-sidebar="configs" onclick="switchTab('configs')">
-        <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
-        Backend Configs
+    <aside class="glass border-r hairline w-52 flex-shrink-0 flex flex-col py-2 overflow-y-auto">
+      <!-- Overview -->
+      <div class="sidebar-category" data-category="overview" onclick="toggleCategory('overview')">
+        <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        <span data-i18n="sidebar.overview">OVERVIEW</span>
       </div>
-      <div class="sidebar-item" data-sidebar="tenants" onclick="switchTab('tenants')">
-        <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
-        Tenants
+      <div class="sidebar-items" data-category-items="overview">
+        <div class="sidebar-item active" data-sidebar="dashboard" onclick="switchTab('dashboard')">
+          <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          <span data-i18n="sidebar.dashboard">Dashboard</span>
+        </div>
       </div>
-      <div class="sidebar-item" data-sidebar="files" onclick="switchTab('files')">
-        <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-        File Records
+
+      <!-- System -->
+      <div class="sidebar-category mt-3" data-category="system" onclick="toggleCategory('system')">
+        <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        <span data-i18n="sidebar.system">SYSTEM</span>
+      </div>
+      <div class="sidebar-items" data-category-items="system">
+        <div class="sidebar-item" data-sidebar="configs" onclick="switchTab('configs')">
+          <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+          <span data-i18n="sidebar.configs">Configs</span>
+        </div>
+        <div class="sidebar-item" data-sidebar="tenants" onclick="switchTab('tenants')">
+          <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+          <span data-i18n="sidebar.tenants">Tenants</span>
+        </div>
+        <div class="sidebar-item" data-sidebar="files" onclick="switchTab('files')">
+          <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          <span data-i18n="sidebar.files">Files</span>
+        </div>
+      </div>
+
+      <!-- Monitoring -->
+      <div class="sidebar-category mt-3" data-category="monitor" onclick="toggleCategory('monitor')">
+        <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        <span data-i18n="sidebar.monitor">MONITOR</span>
+      </div>
+      <div class="sidebar-items" data-category-items="monitor">
+        <div class="sidebar-item" data-sidebar="health" onclick="switchTab('health')">
+          <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          <span data-i18n="sidebar.health">Health</span>
+        </div>
+        <div class="sidebar-item" data-sidebar="audit" onclick="switchTab('audit')">
+          <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          <span data-i18n="sidebar.audit">Audit Log</span>
+        </div>
+      </div>
+
+      <!-- User card at bottom -->
+      <div class="user-card mt-auto">
+        <div class="user-avatar" id="user-avatar-initial">?</div>
+        <div class="flex-1 min-w-0">
+          <p class="text-xs font-medium truncate" id="user-name">---</p>
+          <p class="text-[10px] opacity-40" data-i18n="sidebar.admin">Admin</p>
+        </div>
+        <button class="btn btn-ghost btn-sm w-6 h-6 p-0 rounded-full" onclick="logout()" title="Sign out">
+          <svg class="w-3 h-3 opacity-50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        </button>
       </div>
     </aside>
 
     <!-- Main content -->
     <main class="flex-1 overflow-y-auto px-8 py-6">
 
+      <!-- Dashboard Tab -->
+      <section id="tab-dashboard">
+        <div class="mb-6">
+          <h2 class="text-lg font-semibold" data-i18n="dashboard.title">Dashboard</h2>
+          <p class="text-xs opacity-40 mt-0.5" data-i18n="dashboard.subtitle">System overview and quick status</p>
+        </div>
+        <!-- Stat cards -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6" id="stats-grid">
+        </div>
+        <!-- Health summary -->
+        <div class="card p-5 mb-4">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-sm font-medium" data-i18n="dashboard.healthSummary">Health Summary</h3>
+            <button class="btn btn-ghost btn-sm text-xs" onclick="switchTab('health')" data-i18n="dashboard.viewHealth">View Health</button>
+          </div>
+          <div id="dash-health-summary" class="flex items-center gap-4">
+            <div class="flex items-center gap-2 text-xs opacity-40">
+              <div class="spinner"></div> Loading...
+            </div>
+          </div>
+        </div>
+        <!-- Recent audit logs -->
+        <div class="card p-5">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-sm font-medium" data-i18n="dashboard.recentLogs">Recent Activity</h3>
+            <button class="btn btn-ghost btn-sm text-xs" onclick="switchTab('audit')" data-i18n="dashboard.viewAll">View All</button>
+          </div>
+          <div id="dash-audit-logs">
+            <div class="flex items-center gap-2 text-xs opacity-40">
+              <div class="spinner"></div> Loading...
+            </div>
+          </div>
+        </div>
+      </section>
+
       <!-- Configs Tab -->
-      <section id="tab-configs">
+      <section id="tab-configs" class="hidden">
         <div class="flex items-center justify-between mb-5">
           <div>
-            <h2 class="text-lg font-semibold">Backend Configs</h2>
-            <p class="text-xs opacity-40 mt-0.5">Manage S3, Dufs, and Redis storage backends</p>
+            <h2 class="text-lg font-semibold" data-i18n="configs.title">Backend Configs</h2>
+            <p class="text-xs opacity-40 mt-0.5" data-i18n="configs.subtitle">Manage S3, Dufs, and Redis storage backends</p>
           </div>
-          <button class="btn btn-primary btn-sm" onclick="openConfigModal()">+ New Config</button>
+          <button class="btn btn-primary btn-sm" onclick="openConfigModal()" data-i18n="configs.newConfig">+ New Config</button>
         </div>
         <div id="configs-list" class="space-y-3"></div>
       </section>
@@ -275,10 +424,10 @@
       <section id="tab-tenants" class="hidden">
         <div class="flex items-center justify-between mb-5">
           <div>
-            <h2 class="text-lg font-semibold">Tenants</h2>
-            <p class="text-xs opacity-40 mt-0.5">Manage tenant accounts and quota limits</p>
+            <h2 class="text-lg font-semibold" data-i18n="tenants.title">Tenants</h2>
+            <p class="text-xs opacity-40 mt-0.5" data-i18n="tenants.subtitle">Manage tenant accounts and quota limits</p>
           </div>
-          <button class="btn btn-primary btn-sm" onclick="openTenantModal()">+ New Tenant</button>
+          <button class="btn btn-primary btn-sm" onclick="openTenantModal()" data-i18n="tenants.newTenant">+ New Tenant</button>
         </div>
         <div id="tenants-list" class="space-y-3"></div>
       </section>
@@ -286,16 +435,44 @@
       <!-- Files Tab -->
       <section id="tab-files" class="hidden">
         <div class="mb-5">
-          <h2 class="text-lg font-semibold">File Records</h2>
-          <p class="text-xs opacity-40 mt-0.5">View files across all tenants</p>
+          <h2 class="text-lg font-semibold" data-i18n="files.title">File Records</h2>
+          <p class="text-xs opacity-40 mt-0.5" data-i18n="files.subtitle">View files across all tenants</p>
         </div>
         <div class="mb-4">
-          <label class="text-xs opacity-50 block mb-1.5">Select Tenant</label>
+          <label class="text-xs opacity-50 block mb-1.5" data-i18n="files.selectTenant">Select Tenant</label>
           <select id="files-tenant-select" class="w-full max-w-xs" onchange="loadFiles()">
-            <option value="">-- Select a tenant --</option>
+            <option value="">-- <span data-i18n="files.selectTenantPrompt">Select a tenant</span> --</option>
           </select>
         </div>
         <div id="files-table-container"></div>
+      </section>
+
+      <!-- Health Tab -->
+      <section id="tab-health" class="hidden">
+        <div class="flex items-center justify-between mb-5">
+          <div>
+            <h2 class="text-lg font-semibold" data-i18n="health.title">Health Probes</h2>
+            <p class="text-xs opacity-40 mt-0.5" data-i18n="health.subtitle">Backend connectivity status</p>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="probeAll()" id="btn-probe-all" data-i18n="health.probeAll">Probe All</button>
+        </div>
+        <div id="health-status-bar" class="flex items-center gap-4 mb-4 text-xs"></div>
+        <div id="health-results" class="space-y-3"></div>
+      </section>
+
+      <!-- Audit Logs Tab -->
+      <section id="tab-audit" class="hidden">
+        <div class="flex items-center justify-between mb-5">
+          <div>
+            <h2 class="text-lg font-semibold" data-i18n="audit.title">Audit Logs</h2>
+            <p class="text-xs opacity-40 mt-0.5" data-i18n="audit.subtitle">Track all administrative actions</p>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="loadAuditLogs(0)" data-i18n="audit.refresh">Refresh</button>
+        </div>
+        <div class="card overflow-hidden">
+          <div id="audit-table-container"></div>
+          <div id="audit-pagination" class="flex items-center justify-between px-4 py-3 border-t hairline"></div>
+        </div>
       </section>
 
     </main>
@@ -313,11 +490,11 @@
     <form id="config-form" class="p-6 space-y-4" onsubmit="saveConfig(event)">
       <input type="hidden" id="cfg-id">
       <div>
-        <label class="text-xs opacity-50 block mb-1.5">Name</label>
+        <label class="text-xs opacity-50 block mb-1.5" data-i18n="common.name">Name</label>
         <input type="text" id="cfg-name" class="w-full" placeholder="My S3 Bucket" required>
       </div>
       <div>
-        <label class="text-xs opacity-50 block mb-1.5">Backend Type</label>
+        <label class="text-xs opacity-50 block mb-1.5" data-i18n="common.type">Backend Type</label>
         <select id="cfg-type" class="w-full" onchange="onConfigTypeChange()">
           <option value="s3">S3</option>
           <option value="dufs">Dufs</option>
@@ -325,24 +502,24 @@
         </select>
       </div>
       <div>
-        <label class="text-xs opacity-50 block mb-1.5">Endpoint</label>
+        <label class="text-xs opacity-50 block mb-1.5" data-i18n="common.endpoint">Endpoint</label>
         <input type="text" id="cfg-endpoint" class="w-full" placeholder="https://s3.amazonaws.com" required>
       </div>
       <!-- S3 fields -->
       <div class="cfg-s3">
-        <label class="text-xs opacity-50 block mb-1.5">Region</label>
+        <label class="text-xs opacity-50 block mb-1.5" data-i18n="common.region">Region</label>
         <input type="text" id="cfg-region" class="w-full" placeholder="us-east-1">
       </div>
       <div class="cfg-s3">
-        <label class="text-xs opacity-50 block mb-1.5">Bucket</label>
+        <label class="text-xs opacity-50 block mb-1.5" data-i18n="common.bucket">Bucket</label>
         <input type="text" id="cfg-bucket" class="w-full" placeholder="my-bucket">
       </div>
       <div class="cfg-s3">
-        <label class="text-xs opacity-50 block mb-1.5">Access Key ID</label>
+        <label class="text-xs opacity-50 block mb-1.5" data-i18n="common.accessKeyId">Access Key ID</label>
         <input type="text" id="cfg-access-key-id" class="w-full" placeholder="AKIA...">
       </div>
       <div class="cfg-s3">
-        <label class="text-xs opacity-50 block mb-1.5">Secret Access Key</label>
+        <label class="text-xs opacity-50 block mb-1.5" data-i18n="common.secretKey">Secret Access Key</label>
         <input type="password" id="cfg-secret-access-key" class="w-full" placeholder="(unchanged if empty)">
       </div>
       <div class="cfg-s3 flex items-center gap-2">
@@ -351,20 +528,20 @@
       </div>
       <!-- Dufs fields -->
       <div class="cfg-dufs hidden">
-        <label class="text-xs opacity-50 block mb-1.5">Username</label>
+        <label class="text-xs opacity-50 block mb-1.5" data-i18n="common.username">Username</label>
         <input type="text" id="cfg-dufs-username" class="w-full" placeholder="admin">
       </div>
       <div class="cfg-dufs hidden">
-        <label class="text-xs opacity-50 block mb-1.5">Password</label>
+        <label class="text-xs opacity-50 block mb-1.5" data-i18n="common.password">Password</label>
         <input type="password" id="cfg-dufs-password" class="w-full" placeholder="(unchanged if empty)">
       </div>
       <!-- Redis fields -->
       <div class="cfg-redis hidden">
-        <label class="text-xs opacity-50 block mb-1.5">Password</label>
+        <label class="text-xs opacity-50 block mb-1.5" data-i18n="common.password">Password</label>
         <input type="password" id="cfg-redis-password" class="w-full" placeholder="(unchanged if empty)">
       </div>
       <div class="cfg-redis hidden">
-        <label class="text-xs opacity-50 block mb-1.5">DB Index</label>
+        <label class="text-xs opacity-50 block mb-1.5" data-i18n="common.dbIndex">DB Index</label>
         <input type="number" id="cfg-db-index" class="w-full" placeholder="0" min="0">
       </div>
       <!-- OSS Preview -->
@@ -377,8 +554,8 @@
         <input type="text" id="cfg-oss-preview-cookie" class="w-full" placeholder="cookie=value">
       </div>
       <div class="flex justify-end gap-2 pt-2">
-        <button type="button" class="btn btn-secondary btn-sm" onclick="closeConfigModal()">Cancel</button>
-        <button type="submit" class="btn btn-primary btn-sm">Save</button>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="closeConfigModal()" data-i18n="common.cancel">Cancel</button>
+        <button type="submit" class="btn btn-primary btn-sm" data-i18n="common.save">Save</button>
       </div>
     </form>
   </div>
@@ -395,30 +572,30 @@
     <form id="tenant-form" class="p-6 space-y-4" onsubmit="saveTenant(event)">
       <input type="hidden" id="tnt-id">
       <div>
-        <label class="text-xs opacity-50 block mb-1.5">Name</label>
+        <label class="text-xs opacity-50 block mb-1.5" data-i18n="common.name">Name</label>
         <input type="text" id="tnt-name" class="w-full" placeholder="My App" required>
       </div>
       <div>
-        <label class="text-xs opacity-50 block mb-1.5">Default Backend Config</label>
+        <label class="text-xs opacity-50 block mb-1.5" data-i18n="tenants.backendConfig">Default Backend Config</label>
         <select id="tnt-backend-config" class="w-full" required></select>
       </div>
       <div class="grid grid-cols-2 gap-4">
         <div>
-          <label class="text-xs opacity-50 block mb-1.5">Max Requests / Day</label>
+          <label class="text-xs opacity-50 block mb-1.5" data-i18n="tenants.maxRequests">Max Requests / Day</label>
           <input type="number" id="tnt-max-requests" class="w-full" value="10000" min="0">
         </div>
         <div>
-          <label class="text-xs opacity-50 block mb-1.5">Max Storage (bytes)</label>
+          <label class="text-xs opacity-50 block mb-1.5" data-i18n="tenants.maxStorage">Max Storage (bytes)</label>
           <input type="number" id="tnt-max-storage" class="w-full" value="10737418240" min="0">
         </div>
       </div>
       <div class="flex items-center gap-2" id="tnt-active-group">
         <input type="checkbox" id="tnt-is-active" class="w-4 h-4" checked>
-        <label class="text-xs opacity-70">Active</label>
+        <label class="text-xs opacity-70" data-i18n="common.active">Active</label>
       </div>
       <div class="flex justify-end gap-2 pt-2">
-        <button type="button" class="btn btn-secondary btn-sm" onclick="closeTenantModal()">Cancel</button>
-        <button type="submit" class="btn btn-primary btn-sm">Save</button>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="closeTenantModal()" data-i18n="common.cancel">Cancel</button>
+        <button type="submit" class="btn btn-primary btn-sm" data-i18n="common.save">Save</button>
       </div>
     </form>
   </div>
@@ -429,20 +606,155 @@
   <div class="absolute inset-0 modal-backdrop" onclick="closeDeleteModal()"></div>
   <div class="relative glass border hairline rounded-2xl w-full max-w-sm mx-4 modal-panel p-6 text-center">
     <p class="text-sm mb-1" id="delete-message">Are you sure?</p>
-    <p class="text-xs opacity-40 mb-6">This action cannot be undone.</p>
+    <p class="text-xs opacity-40 mb-6" data-i18n="common.cannotUndo">This action cannot be undone.</p>
     <div class="flex justify-center gap-2">
-      <button class="btn btn-secondary btn-sm" onclick="closeDeleteModal()">Cancel</button>
-      <button class="btn btn-danger btn-sm" id="delete-confirm-btn">Delete</button>
+      <button class="btn btn-secondary btn-sm" onclick="closeDeleteModal()" data-i18n="common.cancel">Cancel</button>
+      <button class="btn btn-danger btn-sm" id="delete-confirm-btn" data-i18n="common.delete">Delete</button>
     </div>
   </div>
 </div>
 
 <script>
+// ── i18n ──
+var i18n = {
+  zh: {
+    'sidebar.overview': '概览',
+    'sidebar.dashboard': '仪表盘',
+    'sidebar.system': '系统',
+    'sidebar.configs': '后端配置',
+    'sidebar.tenants': '租户',
+    'sidebar.files': '文件记录',
+    'sidebar.monitor': '监控',
+    'sidebar.health': '健康探测',
+    'sidebar.audit': '审计日志',
+    'sidebar.admin': '管理员',
+    'dashboard.title': '仪表盘',
+    'dashboard.subtitle': '系统概览与快速状态',
+    'dashboard.healthSummary': '健康概要',
+    'dashboard.viewHealth': '查看详情',
+    'dashboard.recentLogs': '最近活动',
+    'dashboard.viewAll': '查看全部',
+    'dashboard.configs': '配置数',
+    'dashboard.activeTenants': '活跃 / 总租户',
+    'dashboard.totalFiles': '文件总数',
+    'dashboard.storageUsed': '已用存储',
+    'configs.title': '后端配置',
+    'configs.subtitle': '管理 S3、Dufs、Redis 存储后端',
+    'configs.newConfig': '+ 新建配置',
+    'tenants.title': '租户',
+    'tenants.subtitle': '管理租户账户与配额',
+    'tenants.newTenant': '+ 新建租户',
+    'tenants.backendConfig': '默认后端配置',
+    'tenants.maxRequests': '每日最大请求',
+    'tenants.maxStorage': '最大存储 (bytes)',
+    'files.title': '文件记录',
+    'files.subtitle': '查看所有租户的文件',
+    'files.selectTenant': '选择租户',
+    'files.selectTenantPrompt': '选择一个租户',
+    'health.title': '健康探测',
+    'health.subtitle': '后端连接状态',
+    'health.probeAll': '全部探测',
+    'health.ok': '正常',
+    'health.error': '异常',
+    'health.latency': '延迟',
+    'health.probe': '探测',
+    'health.probing': '探测中...',
+    'audit.title': '审计日志',
+    'audit.subtitle': '追踪所有管理操作',
+    'audit.refresh': '刷新',
+    'audit.prev': '上一页',
+    'audit.next': '下一页',
+    'audit.total': '共 {{count}} 条',
+    'common.name': '名称',
+    'common.type': '类型',
+    'common.endpoint': '端点',
+    'common.region': '区域',
+    'common.bucket': '存储桶',
+    'common.accessKeyId': 'Access Key ID',
+    'common.secretKey': 'Secret Access Key',
+    'common.username': '用户名',
+    'common.password': '密码',
+    'common.dbIndex': '数据库索引',
+    'common.cancel': '取消',
+    'common.save': '保存',
+    'common.delete': '删除',
+    'common.active': '启用',
+    'common.cannotUndo': '此操作无法撤销',
+    'common.noConfigs': '暂无配置',
+    'common.noConfigsHint': '创建一个来开始使用',
+    'common.noTenants': '暂无租户',
+    'common.noTenantsHint': '创建一个来开始使用',
+    'common.noFiles': '此租户无文件',
+    'common.selectTenantFirst': '选择一个租户查看文件',
+    'common.loadFailed': '加载失败',
+    'login.subtitle': '使用 GitHub 账户登录以继续',
+    'login.btnText': '使用 GitHub 登录',
+    'toast.configCreated': '配置已创建',
+    'toast.configUpdated': '配置已更新',
+    'toast.configDeleted': '配置已删除',
+    'toast.tenantCreated': '租户已创建',
+    'toast.tenantUpdated': '租户已更新',
+    'toast.tenantDeleted': '租户已删除',
+    'toast.sessionExpired': '会话已过期',
+    'toast.connectionOk': '连接成功',
+    'toast.probeComplete': '探测完成',
+    'toast.allOk': '全部正常',
+    'toast.errorsFound': '{{count}} 个异常',
+    'toast.allError': '全部异常',
+  },
+  en: {}
+};
+var currentLang = 'en';
+
+function t(key, repl) {
+  var dict = i18n[currentLang];
+  var val = (dict && dict[key]) || key;
+  if (repl) {
+    Object.keys(repl).forEach(function(k) {
+      val = val.replace('{{' + k + '}}', repl[k]);
+    });
+  }
+  return val;
+}
+
+function translateUI() {
+  document.querySelectorAll('[data-i18n]').forEach(function(el) {
+    var key = el.dataset.i18n;
+    var translated = t(key);
+    if (el.tagName === 'INPUT' && (el.type === 'button' || el.type === 'submit')) {
+      el.value = translated;
+    } else if (el.tagName === 'OPTION' && el.value === '') {
+      // placeholder option — handled in render functions
+    } else {
+      el.textContent = translated;
+    }
+  });
+  // Update placeholder options
+  updateFileTenantSelect();
+  // Re-render current tab to pick up translated labels
+  if (currentUser) refreshCurrentTab();
+}
+
+function setLang(lang) {
+  currentLang = lang;
+  localStorage.setItem('lang', lang);
+  var lbl = document.getElementById('lang-label');
+  if (lbl) lbl.textContent = lang === 'zh' ? '中' : 'EN';
+  translateUI();
+}
+
+function toggleLang() {
+  setLang(currentLang === 'zh' ? 'en' : 'zh');
+}
+
 // ── State ──
-let currentTab = 'configs';
-let currentUser = null;
-let configs = [];
-let tenants = [];
+var currentTab = 'dashboard';
+var currentUser = null;
+var configs = [];
+var tenants = [];
+var auditPageSize = 20;
+var auditOffset = 0;
+var auditTotal = 0;
 
 // ── Helpers ──
 function fmt(n) {
@@ -459,7 +771,7 @@ function fmtTs(sec) {
 }
 
 function badge(t) {
-  const colors = { s3: 'rgba(59,130,246,0.15)', dufs: 'rgba(168,85,247,0.15)', redis: 'rgba(239,68,68,0.15)' };
+  var colors = { s3: 'rgba(59,130,246,0.15)', dufs: 'rgba(168,85,247,0.15)', redis: 'rgba(239,68,68,0.15)' };
   return '<span class="badge" style="background:' + (colors[t] || 'rgba(255,255,255,0.1)') + '">' + (t || '').toUpperCase() + '</span>';
 }
 
@@ -488,12 +800,12 @@ async function api(path, opts) {
       body: opts.body ? JSON.stringify(opts.body) : undefined,
       credentials: 'same-origin',
     });
-    if (res.status === 401) { showLogin(); throw new Error('Session expired'); }
+    if (res.status === 401) { showLogin(); throw new Error(t('toast.sessionExpired')); }
     var data = await res.json();
     if (!res.ok) throw new Error(data.error || data.message || 'Request failed');
     return data;
   } catch (e) {
-    if (e.message !== 'Session expired') toast(e.message, 'error');
+    if (e.message !== t('toast.sessionExpired')) toast(e.message, 'error');
     throw e;
   }
 }
@@ -505,6 +817,7 @@ async function checkSession() {
     if (res.success && res.data) {
       currentUser = res.data.username;
       document.getElementById('user-name').textContent = currentUser;
+      document.getElementById('user-avatar-initial').textContent = (currentUser[0] || '?').toUpperCase();
       showApp();
       loadCurrentTab();
       return;
@@ -522,6 +835,9 @@ function showLogin() {
     document.getElementById('login-error').textContent = 'You are not an admin. Please contact the administrator.';
     document.getElementById('login-error').classList.remove('hidden');
   }
+  // Apply i18n to login UI
+  document.getElementById('login-subtitle').textContent = t('login.subtitle');
+  document.getElementById('login-btn-text').textContent = t('login.btnText');
 }
 
 function showApp() {
@@ -559,31 +875,132 @@ function toggleTheme() {
     document.documentElement.classList.remove('light');
   }
   applyTheme();
+  // Init i18n
+  var savedLang = localStorage.getItem('lang');
+  if (savedLang === 'zh') currentLang = 'zh';
+  setLang(currentLang);
 })();
 
-// ── Tabs / Sidebar ──
+// ── Sidebar categories ──
+function toggleCategory(name) {
+  var el = document.querySelector('[data-category="' + name + '"]');
+  el.classList.toggle('collapsed');
+  localStorage.setItem('cat-' + name, el.classList.contains('collapsed') ? 'collapsed' : '');
+}
+
+// ── Tabs ──
 function switchTab(tab) {
   currentTab = tab;
-  // Update sidebar active state
   document.querySelectorAll('[data-sidebar]').forEach(function(el) {
-    if (el.dataset.sidebar === tab) {
-      el.classList.add('active');
-    } else {
-      el.classList.remove('active');
-    }
+    el.classList.toggle('active', el.dataset.sidebar === tab);
   });
-  // Toggle content sections
-  document.getElementById('tab-configs').classList.toggle('hidden', tab !== 'configs');
-  document.getElementById('tab-tenants').classList.toggle('hidden', tab !== 'tenants');
-  document.getElementById('tab-files').classList.toggle('hidden', tab !== 'files');
+  ['dashboard', 'configs', 'tenants', 'files', 'health', 'audit'].forEach(function(t) {
+    var s = document.getElementById('tab-' + t);
+    if (s) s.classList.toggle('hidden', t !== tab);
+  });
   loadCurrentTab();
 }
 
 function loadCurrentTab() {
   if (!currentUser) return;
-  if (currentTab === 'configs') loadConfigs();
+  if (currentTab === 'dashboard') loadDashboard();
+  else if (currentTab === 'configs') loadConfigs();
   else if (currentTab === 'tenants') loadTenants();
   else if (currentTab === 'files') loadTenantsForSelect();
+  else if (currentTab === 'health') loadHealth();
+  else if (currentTab === 'audit') loadAuditLogs(0);
+}
+
+function refreshCurrentTab() {
+  if (currentTab === 'dashboard') renderDashboard();
+  else if (currentTab === 'configs') renderConfigs();
+  else if (currentTab === 'tenants') renderTenants();
+  else if (currentTab === 'health') renderHealth();
+  else if (currentTab === 'audit') renderAuditLogs();
+}
+
+// ── Dashboard ──
+var dashStats = null;
+var dashHealth = null;
+var dashAuditLogs = [];
+
+async function loadDashboard() {
+  try {
+    var res = await api('/api/admin/stats');
+    dashStats = res.data;
+    renderStatsCards();
+  } catch (_) {
+    document.getElementById('stats-grid').innerHTML = '<div class="col-span-4 empty-state"><p class="text-sm">' + t('common.loadFailed') + '</p></div>';
+  }
+  try {
+    var hres = await api('/api/admin/health');
+    dashHealth = hres.data;
+    renderDashHealthSummary();
+  } catch (_) {}
+  try {
+    var ares = await api('/api/admin/audit-logs?offset=0&limit=5');
+    dashAuditLogs = (ares.data && ares.data.logs) || [];
+    renderDashAuditLogs();
+  } catch (_) {
+    document.getElementById('dash-audit-logs').innerHTML = '<div class="text-xs opacity-40">' + t('common.loadFailed') + '</div>';
+  }
+}
+
+function renderDashboard() {
+  if (dashStats) renderStatsCards();
+  if (dashHealth) renderDashHealthSummary();
+  if (dashAuditLogs.length || dashStats) renderDashAuditLogs();
+}
+
+function renderStatsCards() {
+  if (!dashStats) return;
+  var grid = document.getElementById('stats-grid');
+  var s = dashStats;
+  var cards = [
+    { icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="12" cy="12" r="3"/></svg>', iconBg: 'rgba(59,130,246,0.12)', iconColor: '#3b82f6', label: t('dashboard.configs'), value: s.total_configs },
+    { icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>', iconBg: 'rgba(34,197,94,0.12)', iconColor: '#22c55e', label: t('dashboard.activeTenants'), value: s.active_tenants + ' / ' + s.total_tenants },
+    { icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>', iconBg: 'rgba(245,158,11,0.12)', iconColor: '#f59e0b', label: t('dashboard.totalFiles'), value: s.total_files },
+    { icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>', iconBg: 'rgba(168,85,247,0.12)', iconColor: '#a855f7', label: t('dashboard.storageUsed'), value: fmt(s.total_storage_used_bytes) }
+  ];
+  grid.innerHTML = cards.map(function(c) {
+    return '<div class="stat-card">' +
+      '<div class="stat-icon" style="background:' + c.iconBg + ';color:' + c.iconColor + '">' + c.icon + '</div>' +
+      '<p class="text-[28px] font-semibold leading-tight tracking-tight">' + c.value + '</p>' +
+      '<p class="text-xs opacity-40 mt-1">' + c.label + '</p>' +
+    '</div>';
+  }).join('');
+}
+
+function renderDashHealthSummary() {
+  var el = document.getElementById('dash-health-summary');
+  if (!dashHealth) {
+    el.innerHTML = '<span class="text-xs opacity-40">' + t('common.loadFailed') + '</span>';
+    return;
+  }
+  var ok = dashHealth.ok_count;
+  var err = dashHealth.error_count;
+  var total = ok + err;
+  var statusClass = err === 0 ? 'health-ok' : ok === 0 ? 'health-err' : 'health-pending';
+  var statusText = err === 0 ? t('toast.allOk') : ok === 0 ? t('toast.allError') : ok + '/' + total + ' OK';
+  el.innerHTML =
+    '<div class="health-dot ' + statusClass + '"></div>' +
+    '<span class="text-sm font-medium">' + statusText + '</span>' +
+    (err > 0 ? '<span class="text-xs opacity-40">(' + t('toast.errorsFound', {count: err}) + ')</span>' : '');
+}
+
+function renderDashAuditLogs() {
+  var el = document.getElementById('dash-audit-logs');
+  if (dashAuditLogs.length === 0) {
+    el.innerHTML = '<p class="text-xs opacity-40">No recent activity</p>';
+    return;
+  }
+  el.innerHTML = dashAuditLogs.map(function(l) {
+    return '<div class="flex items-center gap-3 py-2 border-b hairline last:border-0">' +
+      '<span class="text-xs font-mono opacity-60 w-14 flex-shrink-0">' + esc(l.action) + '</span>' +
+      '<span class="text-xs flex-1 truncate">' + esc(l.detail || '—') + '</span>' +
+      '<span class="text-xs opacity-30 flex-shrink-0">' + fmtTs(l.created_at) + '</span>' +
+    '</div>';
+  }).join('');
 }
 
 // ── Configs CRUD ──
@@ -598,7 +1015,7 @@ async function loadConfigs() {
 function renderConfigs() {
   var el = document.getElementById('configs-list');
   if (configs.length === 0) {
-    el.innerHTML = '<div class="empty-state"><p class="text-sm">No configs yet</p><p class="text-xs mt-1">Create one to get started</p></div>';
+    el.innerHTML = '<div class="empty-state"><p class="text-sm">' + t('common.noConfigs') + '</p><p class="text-xs mt-1">' + t('common.noConfigsHint') + '</p></div>';
     return;
   }
   el.innerHTML = configs.map(function(c) {
@@ -613,7 +1030,7 @@ function renderConfigs() {
       '<div class="flex items-center gap-1">' +
         '<button class="btn btn-ghost btn-sm text-xs" onclick="testConfig(\'' + c.id + '\')">Test</button>' +
         '<button class="btn btn-ghost btn-sm text-xs" onclick="editConfig(\'' + c.id + '\')">Edit</button>' +
-        '<button class="btn btn-ghost btn-sm text-xs" style="color:var(--danger)" onclick="deleteConfig(\'' + c.id + '\',\'' + esc(c.name) + '\')">Delete</button>' +
+        '<button class="btn btn-ghost btn-sm text-xs" style="color:var(--danger)" onclick="deleteConfig(\'' + c.id + '\',\'' + esc(c.name) + '\')">' + t('common.delete') + '</button>' +
       '</div>' +
     '</div>';
   }).join('');
@@ -629,10 +1046,13 @@ function openConfigModal() {
   document.getElementById('cfg-bucket').value = '';
   document.getElementById('cfg-access-key-id').value = '';
   document.getElementById('cfg-secret-access-key').value = '';
+  document.getElementById('cfg-secret-access-key').placeholder = '';
   document.getElementById('cfg-force-path-style').checked = false;
   document.getElementById('cfg-dufs-username').value = '';
   document.getElementById('cfg-dufs-password').value = '';
+  document.getElementById('cfg-dufs-password').placeholder = '';
   document.getElementById('cfg-redis-password').value = '';
+  document.getElementById('cfg-redis-password').placeholder = '';
   document.getElementById('cfg-db-index').value = '';
   document.getElementById('cfg-oss-preview-url').value = '';
   document.getElementById('cfg-oss-preview-cookie').value = '';
@@ -713,10 +1133,10 @@ async function saveConfig(e) {
   try {
     if (id) {
       await api('/api/admin/configs/' + id, { method: 'PUT', body: body });
-      toast('Config updated', 'success');
+      toast(t('toast.configUpdated'), 'success');
     } else {
       await api('/api/admin/configs', { method: 'POST', body: body });
-      toast('Config created', 'success');
+      toast(t('toast.configCreated'), 'success');
     }
     closeConfigModal();
     loadConfigs();
@@ -727,7 +1147,7 @@ function deleteConfig(id, name) {
   openDelete('Delete config "' + name + '"?', async function() {
     try {
       await api('/api/admin/configs/' + id, { method: 'DELETE' });
-      toast('Config deleted', 'success');
+      toast(t('toast.configDeleted'), 'success');
       closeDeleteModal();
       loadConfigs();
     } catch (_) {}
@@ -735,11 +1155,9 @@ function deleteConfig(id, name) {
 }
 
 async function testConfig(id) {
-  var c = configs.find(function(x) { return x.id === id; });
-  if (!c) return;
   try {
     var res = await api('/api/admin/configs/' + id + '/test', { method: 'POST' });
-    toast(res.data && res.data.message ? res.data.message : 'Connection OK', 'success');
+    toast(res.data && res.data.message ? res.data.message : t('toast.connectionOk'), 'success');
   } catch (_) {}
 }
 
@@ -747,19 +1165,17 @@ async function testConfig(id) {
 async function loadTenants() {
   try {
     var res = await api('/api/admin/tenants');
-    var list = res.data;
-    tenants = Array.isArray(list) ? list : (list && list.tenants || []);
+    tenants = Array.isArray(res.data) ? res.data : (res.data && res.data.tenants || []);
     renderTenants();
   } catch (e) {
-    console.error('loadTenants:', e);
-    document.getElementById('tenants-list').innerHTML = '<div class="empty-state"><p class="text-sm">Failed to load tenants</p><p class="text-xs mt-1">' + esc(e.message) + '</p></div>';
+    document.getElementById('tenants-list').innerHTML = '<div class="empty-state"><p class="text-sm">' + t('common.loadFailed') + '</p><p class="text-xs mt-1">' + esc(e.message || '') + '</p></div>';
   }
 }
 
 function renderTenants() {
   var el = document.getElementById('tenants-list');
   if (tenants.length === 0) {
-    el.innerHTML = '<div class="empty-state"><p class="text-sm">No tenants yet</p><p class="text-xs mt-1">Create one to get started</p></div>';
+    el.innerHTML = '<div class="empty-state"><p class="text-sm">' + t('common.noTenants') + '</p><p class="text-xs mt-1">' + t('common.noTenantsHint') + '</p></div>';
     return;
   }
   el.innerHTML = tenants.map(function(t) {
@@ -773,7 +1189,7 @@ function renderTenants() {
         '</div>' +
         '<div class="flex items-center gap-1">' +
           '<button class="btn btn-ghost btn-sm text-xs" onclick="editTenant(\'' + t.id + '\')">Edit</button>' +
-          '<button class="btn btn-ghost btn-sm text-xs" style="color:var(--danger)" onclick="deleteTenant(\'' + t.id + '\',\'' + esc(t.name) + '\')">Delete</button>' +
+          '<button class="btn btn-ghost btn-sm text-xs" style="color:var(--danger)" onclick="deleteTenant(\'' + t.id + '\',\'' + esc(t.name) + '\')">' + t('common.delete') + '</button>' +
         '</div>' +
       '</div>' +
       '<div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">' +
@@ -851,10 +1267,10 @@ async function saveTenant(e) {
   try {
     if (id) {
       await api('/api/admin/tenants/' + id, { method: 'PUT', body: body });
-      toast('Tenant updated', 'success');
+      toast(t('toast.tenantUpdated'), 'success');
     } else {
       await api('/api/admin/tenants', { method: 'POST', body: body });
-      toast('Tenant created', 'success');
+      toast(t('toast.tenantCreated'), 'success');
     }
     closeTenantModal();
     loadTenants();
@@ -865,7 +1281,7 @@ function deleteTenant(id, name) {
   openDelete('Delete tenant "' + name + '"?', async function() {
     try {
       await api('/api/admin/tenants/' + id, { method: 'DELETE' });
-      toast('Tenant deleted', 'success');
+      toast(t('toast.tenantDeleted'), 'success');
       closeDeleteModal();
       loadTenants();
     } catch (_) {}
@@ -876,11 +1292,10 @@ function deleteTenant(id, name) {
 async function loadTenantsForSelect() {
   try {
     var res = await api('/api/admin/tenants');
-    // API returns data as a plain array, not { tenants: [...] }
-    var list = Array.isArray(res.data) ? res.data : [];
+    var list = Array.isArray(res.data) ? res.data : (res.data && res.data.tenants || []);
     var sel = document.getElementById('files-tenant-select');
     var cur = sel.value;
-    sel.innerHTML = '<option value="">-- Select a tenant --</option>' +
+    sel.innerHTML = '<option value="">-- ' + t('files.selectTenantPrompt') + ' --</option>' +
       list.map(function(t) {
         return '<option value="' + t.id + '"' + (t.id === cur ? ' selected' : '') + '>' + esc(t.name) + '</option>';
       }).join('');
@@ -888,18 +1303,25 @@ async function loadTenantsForSelect() {
   } catch (_) {}
 }
 
+function updateFileTenantSelect() {
+  var sel = document.getElementById('files-tenant-select');
+  if (sel && sel.options.length > 0) {
+    sel.options[0].textContent = '-- ' + t('files.selectTenantPrompt') + ' --';
+  }
+}
+
 async function loadFiles() {
   var tenantId = document.getElementById('files-tenant-select').value;
   var el = document.getElementById('files-table-container');
   if (!tenantId) {
-    el.innerHTML = '<div class="empty-state"><p class="text-sm">Select a tenant to view files</p></div>';
+    el.innerHTML = '<div class="empty-state"><p class="text-sm">' + t('common.selectTenantFirst') + '</p></div>';
     return;
   }
   try {
     var res = await api('/api/admin/tenants/' + tenantId + '/files');
     var files = (res.data && res.data.files) || [];
     if (files.length === 0) {
-      el.innerHTML = '<div class="empty-state"><p class="text-sm">No files for this tenant</p></div>';
+      el.innerHTML = '<div class="empty-state"><p class="text-sm">' + t('common.noFiles') + '</p></div>';
       return;
     }
     el.innerHTML = '<div class="card overflow-hidden"><table class="w-full text-sm"><thead><tr class="border-b hairline text-xs opacity-40">' +
@@ -922,8 +1344,161 @@ async function loadFiles() {
       }).join('') +
       '</tbody></table></div>';
   } catch (_) {
-    el.innerHTML = '<div class="empty-state"><p class="text-sm">Failed to load files</p></div>';
+    el.innerHTML = '<div class="empty-state"><p class="text-sm">' + t('common.loadFailed') + '</p></div>';
   }
+}
+
+// ── Health Probes ──
+var healthResults = null;
+
+async function loadHealth() {
+  try {
+    var res = await api('/api/admin/health');
+    healthResults = res.data;
+    renderHealth();
+  } catch (_) {
+    document.getElementById('health-results').innerHTML = '<div class="empty-state"><p class="text-sm">' + t('common.loadFailed') + '</p></div>';
+  }
+}
+
+function renderHealth() {
+  var statusBar = document.getElementById('health-status-bar');
+  var resultsEl = document.getElementById('health-results');
+
+  if (!healthResults) {
+    resultsEl.innerHTML = '<div class="empty-state"><p class="text-sm">No health data</p></div>';
+    return;
+  }
+
+  var results = healthResults.results || [];
+  var ok = healthResults.ok_count;
+  var err = healthResults.error_count;
+  var statusClass = err === 0 ? 'health-ok' : ok === 0 ? 'health-err' : 'health-pending';
+  var statusText = err === 0 ? t('toast.allOk') : ok + '/' + (ok + err) + ' OK, ' + err + ' ' + t('health.error');
+
+  statusBar.innerHTML =
+    '<div class="health-dot ' + statusClass + '"></div>' +
+    '<span class="font-medium">' + statusText + '</span>';
+
+  if (results.length === 0) {
+    resultsEl.innerHTML = '<div class="empty-state"><p class="text-sm">No backends configured</p></div>';
+    return;
+  }
+
+  resultsEl.innerHTML = results.map(function(r) {
+    var dotClass = r.status === 'ok' ? 'health-ok' : r.status === 'pending' ? 'health-pending' : 'health-err';
+    return '<div class="card p-4 flex items-center justify-between" id="health-card-' + r.config_id + '">' +
+      '<div class="flex items-center gap-4">' +
+        '<div class="health-dot ' + dotClass + '"></div>' +
+        '<div>' +
+          '<p class="text-sm font-medium">' + esc(r.config_name) + '</p>' +
+          '<p class="text-xs opacity-40">' + esc(r.backend_type.toUpperCase()) + ' — ' + (r.status === 'ok' ? t('health.ok') : r.error ? t('health.error') + ': ' + esc(r.error) : t('health.probing')) + '</p>' +
+        '</div>' +
+      '</div>' +
+      '<div class="flex items-center gap-3">' +
+        (r.latency_ms != null ? '<span class="text-xs opacity-40">' + r.latency_ms + 'ms</span>' : '') +
+        '<button class="btn btn-ghost btn-sm text-xs" onclick="probeOne(\'' + r.config_id + '\')" id="btn-probe-' + r.config_id + '">' + t('health.probe') + '</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+async function probeAll() {
+  var btn = document.getElementById('btn-probe-all');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div> ' + t('health.probing');
+
+  // Set all cards to pending
+  document.querySelectorAll('#health-results .card').forEach(function(card) {
+    var dot = card.querySelector('.health-dot');
+    if (dot) { dot.className = 'health-dot health-pending'; }
+    var btn = card.querySelector('button');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<div class="spinner"></div>'; }
+  });
+
+  try {
+    var res = await api('/api/admin/health');
+    healthResults = res.data;
+    renderHealth();
+    var errCount = healthResults ? healthResults.error_count : 0;
+    if (errCount === 0) {
+      toast(t('toast.allOk'), 'success');
+    } else {
+      toast(t('toast.errorsFound', {count: errCount}), 'warning');
+    }
+  } catch (_) {
+    toast(t('common.loadFailed'), 'error');
+  }
+  btn.disabled = false;
+  btn.innerHTML = t('health.probeAll');
+  document.getElementById('health-status-bar').scrollIntoView({ behavior: 'smooth' });
+}
+
+async function probeOne(configId) {
+  var btn = document.getElementById('btn-probe-' + configId);
+  var card = document.getElementById('health-card-' + configId);
+  if (btn) { btn.disabled = true; btn.innerHTML = '<div class="spinner"></div>'; }
+  if (card) {
+    var dot = card.querySelector('.health-dot');
+    if (dot) { dot.className = 'health-dot health-pending'; }
+  }
+  try {
+    var res = await api('/api/admin/health');
+    healthResults = res.data;
+    renderHealth();
+  } catch (_) {}
+}
+
+// ── Audit Logs ──
+var auditLogs = [];
+
+async function loadAuditLogs(offset) {
+  auditOffset = offset || 0;
+  try {
+    var res = await api('/api/admin/audit-logs?offset=' + auditOffset + '&limit=' + auditPageSize);
+    var data = res.data || {};
+    auditLogs = data.logs || [];
+    auditTotal = data.total || 0;
+    renderAuditLogs();
+  } catch (_) {
+    document.getElementById('audit-table-container').innerHTML = '<div class="p-4 text-center text-xs opacity-40">' + t('common.loadFailed') + '</div>';
+  }
+}
+
+function renderAuditLogs() {
+  var tableEl = document.getElementById('audit-table-container');
+  var pageEl = document.getElementById('audit-pagination');
+
+  if (auditLogs.length === 0) {
+    tableEl.innerHTML = '<div class="empty-state py-8"><p class="text-sm">No audit logs</p></div>';
+    pageEl.innerHTML = '';
+    return;
+  }
+
+  tableEl.innerHTML = '<table class="w-full text-sm"><thead><tr class="border-b hairline text-xs opacity-40">' +
+    '<th class="text-left py-3 px-4 font-medium w-24">Action</th>' +
+    '<th class="text-left py-3 px-4 font-medium w-24">User</th>' +
+    '<th class="text-left py-3 px-4 font-medium">Detail</th>' +
+    '<th class="text-right py-3 px-4 font-medium w-40">Time</th>' +
+    '</tr></thead><tbody>' +
+    auditLogs.map(function(l) {
+      return '<tr class="row-hover border-b hairline">' +
+        '<td class="py-2.5 px-4 font-mono text-xs">' + esc(l.action) + '</td>' +
+        '<td class="py-2.5 px-4 text-xs">' + esc(l.username) + '</td>' +
+        '<td class="py-2.5 px-4 text-xs truncate max-w-[300px]">' + esc(l.detail || '—') + '</td>' +
+        '<td class="py-2.5 px-4 text-right text-xs opacity-40">' + fmtTs(l.created_at) + '</td>' +
+        '</tr>';
+    }).join('') +
+    '</tbody></table>';
+
+  var totalPages = Math.ceil(auditTotal / auditPageSize);
+  var currentPage = Math.floor(auditOffset / auditPageSize);
+  pageEl.innerHTML =
+    '<span class="text-xs opacity-40">' + t('audit.total', {count: auditTotal}) + '</span>' +
+    '<div class="flex gap-2">' +
+      '<button class="pagination-btn" ' + (auditOffset === 0 ? 'disabled' : '') + ' onclick="loadAuditLogs(' + Math.max(0, auditOffset - auditPageSize) + ')">' + t('audit.prev') + '</button>' +
+      '<button class="pagination-btn" ' + (auditOffset + auditPageSize >= auditTotal ? 'disabled' : '') + ' onclick="loadAuditLogs(' + (auditOffset + auditPageSize) + ')">' + t('audit.next') + '</button>' +
+    '</div>';
 }
 
 // ── Delete modal ──
