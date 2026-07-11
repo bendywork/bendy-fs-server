@@ -1,4 +1,4 @@
-use std::time::{SystemTime, UNIX_EPOCH};
+use web_time::{SystemTime, UNIX_EPOCH};
 use worker::*;
 
 use crate::config_store;
@@ -127,6 +127,11 @@ pub async fn handle_tenant_upload(mut req: Request, env: &Env) -> Result<Respons
     }?;
 
     if resp.status_code() >= 200 && resp.status_code() < 300 {
+        let preview_url = if config.backend_type == BackendType::S3 && mime_type.starts_with("image/") {
+            Some(s3_signer::presign_get(&config, &key, 604800, None))
+        } else {
+            None
+        };
         let record = FileRecord {
             id: uuid::Uuid::new_v4().to_string(),
             tenant_id: tenant_id.clone(),
@@ -136,7 +141,7 @@ pub async fn handle_tenant_upload(mut req: Request, env: &Env) -> Result<Respons
             size_bytes: size,
             backend_type: config.backend_type.as_str().to_string(),
             backend_config_id: config_id.clone(),
-            preview_url: None,
+            preview_url,
             created_at: now_ts(),
         };
         db::create_file_record(env, &record).await?;

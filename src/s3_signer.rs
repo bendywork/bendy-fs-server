@@ -259,10 +259,13 @@ fn presign_url(
             signature
         )
     } else {
+        let host = extract_host(&config.endpoint);
+        let protocol = if config.endpoint.starts_with("https://") { "https" } else { "http" };
         format!(
-            "{}/{}/{}?{}&X-Amz-Signature={}",
-            base,
+            "{}://{}.{}/{}?{}&X-Amz-Signature={}",
+            protocol,
             config.bucket,
+            host,
             key.trim_start_matches('/'),
             canonical_query_string,
             signature
@@ -323,12 +326,23 @@ pub fn build_auth_header(
 
     let payload_hash = sha256_hex(body);
 
-    let content_type_str = content_type.unwrap_or("application/octet-stream");
-    let canonical_headers = format!(
-        "content-type:{}\nhost:{}\nx-amz-content-sha256:{}\nx-amz-date:{}\n",
-        content_type_str, host, payload_hash, long_date
-    );
-    let signed_headers = "content-type;host;x-amz-content-sha256;x-amz-date";
+    let (canonical_headers, signed_headers) = if let Some(ct) = content_type {
+        (
+            format!(
+                "content-type:{}\nhost:{}\nx-amz-content-sha256:{}\nx-amz-date:{}\n",
+                ct, host, payload_hash, long_date
+            ),
+            "content-type;host;x-amz-content-sha256;x-amz-date",
+        )
+    } else {
+        (
+            format!(
+                "host:{}\nx-amz-content-sha256:{}\nx-amz-date:{}\n",
+                host, payload_hash, long_date
+            ),
+            "host;x-amz-content-sha256;x-amz-date",
+        )
+    };
 
     let canonical_request = format!(
         "{}\n{}\n{}\n{}\n{}\n{}",

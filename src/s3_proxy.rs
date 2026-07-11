@@ -109,6 +109,7 @@ pub async fn proxy_download(
     headers.set("Authorization", &auth_header)?;
     headers.set("x-amz-content-sha256", &empty_hash)?;
     headers.set("x-amz-date", &long_date)?;
+    headers.set("Host", &s3_signer::extract_host(&config.endpoint))?;
 
     let mut init = RequestInit::new();
     init.method = Method::Get;
@@ -163,6 +164,7 @@ pub async fn proxy_delete(
     headers.set("Authorization", &auth_header)?;
     headers.set("x-amz-content-sha256", &empty_hash)?;
     headers.set("x-amz-date", &long_date)?;
+    headers.set("Host", &s3_signer::extract_host(&config.endpoint))?;
 
     let mut init = RequestInit::new();
     init.method = Method::Delete;
@@ -208,6 +210,7 @@ pub async fn test_connection(env: &Env, config_id: &str) -> Result<Response> {
     headers.set("Authorization", &auth_header)?;
     headers.set("x-amz-content-sha256", &empty_hash)?;
     headers.set("x-amz-date", &long_date)?;
+    headers.set("Host", &s3_signer::extract_host(&config.endpoint))?;
 
     let mut init = RequestInit::new();
     init.method = Method::Head;
