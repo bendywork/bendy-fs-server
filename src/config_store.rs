@@ -27,7 +27,12 @@ async fn save_index(env: &Env, ids: &[String]) -> Result<()> {
     Ok(())
 }
 
-pub async fn list_configs(env: &Env) -> Result<Vec<BackendConfig>> {
+pub async fn count_configs(env: &Env) -> Result<usize> {
+    let ids = load_index(env).await?;
+    Ok(ids.len())
+}
+
+pub async fn list_configs(env: &Env, offset: usize, limit: usize) -> Result<Vec<BackendConfig>> {
     let ids = load_index(env).await?;
     let kv = configs_kv(env)?;
     let mut configs = Vec::new();
@@ -41,7 +46,8 @@ pub async fn list_configs(env: &Env) -> Result<Vec<BackendConfig>> {
     }
 
     configs.sort_by(|a, b| b.created_at.cmp(&a.created_at));
-    Ok(configs)
+    let paginated: Vec<BackendConfig> = configs.into_iter().skip(offset).take(limit).collect();
+    Ok(paginated)
 }
 
 pub async fn get_config(env: &Env, id: &str) -> Result<Option<BackendConfig>> {

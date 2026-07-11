@@ -12,13 +12,22 @@ fn db(env: &Env) -> Result<worker::d1::D1Database> {
 
 #[derive(Debug, Deserialize)]
 struct CountResult {
-    #[serde(alias = "count", alias = "COUNT(*)")]
+    #[serde(alias = "count", alias = "COUNT(*)", default)]
     count: i64,
 }
 
-pub async fn list_tenants(env: &Env) -> Result<Vec<Tenant>> {
+pub async fn count_tenants(env: &Env) -> Result<i64> {
     let d = db(env)?;
-    let result = d.prepare("SELECT * FROM tenants ORDER BY created_at DESC").all().await?;
+    let result = d.prepare("SELECT COUNT(*) as count FROM tenants")
+        .first::<CountResult>(None).await?;
+    Ok(result.map(|r| r.count).unwrap_or(0))
+}
+
+pub async fn list_tenants(env: &Env, offset: i64, limit: i64) -> Result<Vec<Tenant>> {
+    let d = db(env)?;
+    let result = d.prepare("SELECT * FROM tenants ORDER BY created_at DESC LIMIT ?1 OFFSET ?2")
+        .bind(&[JsValue::from_f64(limit as f64), JsValue::from_f64(offset as f64)])?
+        .all().await?;
     result.results::<Tenant>()
         .map_err(|e| worker::Error::RustError(format!("Failed to deserialize tenants: {}", e)))
 }
@@ -354,7 +363,10 @@ pub async fn get_stats(env: &Env) -> Result<AdminStats> {
         .map(|r| r.count).unwrap_or(0);
 
     #[derive(Debug, Deserialize)]
-    struct SumResult { total: Option<f64> }
+    struct SumResult {
+        #[serde(default)]
+        total: Option<f64>,
+    }
 
     let total_storage_bytes = d.prepare("SELECT COALESCE(SUM(storage_used_bytes), 0) as total FROM tenants")
         .first::<SumResult>(None).await?

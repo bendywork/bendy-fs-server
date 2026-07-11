@@ -4,6 +4,8 @@ use serde::{Deserialize, Serialize};
 use sha2::Sha256;
 use worker::*;
 
+use crate::admin_handlers;
+
 type HmacSha256 = Hmac<Sha256>;
 
 const GITHUB_AUTHORIZE_URL: &str = "https://github.com/login/oauth/authorize";
@@ -128,8 +130,26 @@ pub async fn handle_github_login(env: &Env) -> Result<Response> {
     Ok(Response::empty()?.with_status(302).with_headers(headers))
 }
 
+/// Helper: redirect to /admin with an error query param
+fn redirect_admin_error(error: &str) -> Result<Response> {
+    let mut headers = Headers::new();
+    headers.set("Location", &format!("/admin?error={}", error))?;
+    Ok(Response::empty()?.with_status(302).with_headers(headers))
+}
+
 /// GET /api/github/callback?code=... — exchange code, fetch user, verify admin, set cookie
 pub async fn handle_github_callback(req: &Request, env: &Env) -> Result<Response> {
+    let result = handle_github_callback_inner(req, env).await;
+    match result {
+        Ok(resp) => Ok(resp),
+        Err(e) => {
+            console_log!("OAuth callback error: {:?}", e);
+            redirect_admin_error("oauth_failed")
+        }
+    }
+}
+
+async fn handle_github_callback_inner(req: &Request, env: &Env) -> Result<Response> {
     let url = req.url()?;
     let query: Vec<(String, String)> = url
         .query_pairs()
@@ -167,18 +187,23 @@ pub async fn handle_github_callback(req: &Request, env: &Env) -> Result<Response
     let mut token_resp = Fetch::Request(token_req).send().await?;
 
     if token_resp.status_code() >= 400 {
-        return Response::error("GitHub token exchange failed", 502);
+        return Err(worker::Error::RustError("GitHub token exchange failed".into()));
     }
 
     #[derive(Deserialize)]
     struct TokenResponse {
         access_token: Option<String>,
         error: Option<String>,
+        error_description: Option<String>,
     }
 
     let token_data: TokenResponse = token_resp.json().await.map_err(|e| {
         worker::Error::RustError(format!("Failed to parse token response: {}", e))
     })?;
+
+    if let Some(err) = token_data.error {
+        return Err(worker::Error::RustError(format!("GitHub OAuth error: {} - {:?}", err, token_data.error_description)));
+    }
 
     let access_token = token_data
         .access_token
@@ -197,7 +222,7 @@ pub async fn handle_github_callback(req: &Request, env: &Env) -> Result<Response
     let mut user_resp = Fetch::Request(user_req).send().await?;
 
     if user_resp.status_code() >= 400 {
-        return Response::error("Failed to fetch GitHub user", 502);
+        return Err(worker::Error::RustError("Failed to fetch GitHub user".into()));
     }
 
     #[derive(Deserialize)]
@@ -214,10 +239,8 @@ pub async fn handle_github_callback(req: &Request, env: &Env) -> Result<Response
     let username_lower = gh_user.login.to_lowercase();
 
     if !admin_usernames.contains(&username_lower) {
-        // Redirect to admin page with error
-        let mut headers = Headers::new();
-        headers.set("Location", "/admin?error=unauthorized")?;
-        return Ok(Response::empty()?.with_status(302).with_headers(headers));
+        let _ = admin_handlers::audit_log(env, &username_lower, "login_failure", "Not in admin whitelist").await;
+        return redirect_admin_error("unauthorized");
     }
 
     // Issue JWT session
@@ -240,6 +263,8 @@ pub async fn handle_github_callback(req: &Request, env: &Env) -> Result<Response
         "{}={}; Path=/; HttpOnly; SameSite=Lax; Max-Age={}",
         SESSION_COOKIE, token, SESSION_TTL_SECS
     );
+
+    let _ = admin_handlers::audit_log(env, &gh_user.login, "login", "Admin logged in via GitHub OAuth").await;
 
     let mut resp_headers = Headers::new();
     resp_headers.set("Set-Cookie", &cookie_value)?;
@@ -267,14 +292,16 @@ pub async fn handle_get_session(req: &Request, env: &Env) -> Result<Response> {
 }
 
 /// POST /api/auth/logout — clear session cookie
-pub async fn handle_logout() -> Result<Response> {
+pub async fn handle_logout(req: &Request, env: &Env) -> Result<Response> {
     let cookie_value = format!(
         "{}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0",
         SESSION_COOKIE
     );
-    let mut headers = Headers::new();
-    headers.set("Set-Cookie", &cookie_value)?;
-    Ok(Response::from_json(&serde_json::json!({"success": true}))?.with_headers(headers))
+    let body = br#"{"success":true,"v":"3"}"#;
+    let mut resp = Response::from_bytes(body.to_vec()).unwrap_or_else(|_| Response::empty().unwrap());
+    let _ = resp.headers_mut().set("Content-Type", "application/json");
+    let _ = resp.headers_mut().set("Set-Cookie", &cookie_value);
+    Ok(resp)
 }
 
 /// Extract JWT from cookie and verify

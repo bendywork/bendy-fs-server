@@ -70,8 +70,8 @@ pub async fn main(req: Request, env: Env, _ctx: worker::Context) -> Result<Respo
             add_cors(&mut resp);
             Ok(resp)
         })
-        .post_async("/api/auth/logout", |_req, _ctx| async move {
-            let mut resp = github_oauth::handle_logout().await?;
+        .post_async("/api/auth/logout", |req, ctx| async move {
+            let mut resp = github_oauth::handle_logout(&req, &ctx.env).await?;
             add_cors(&mut resp);
             Ok(resp)
         })

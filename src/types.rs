@@ -224,11 +224,16 @@ pub struct TestResult {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Tenant {
+    #[serde(default)]
     pub id: String,
+    #[serde(default)]
     pub name: String,
+    #[serde(default)]
     pub api_key: String,
     #[serde(skip_serializing)]
+    #[serde(default)]
     pub api_secret: String,
+    #[serde(default)]
     pub default_backend_config_id: String,
     #[serde(default)]
     pub max_requests_per_day: i64,
@@ -242,7 +247,9 @@ pub struct Tenant {
     pub last_request_date: String,
     #[serde(default = "default_active")]
     pub is_active: i64,
+    #[serde(default)]
     pub created_at: u64,
+    #[serde(default)]
     pub updated_at: u64,
 }
 
@@ -250,15 +257,24 @@ fn default_active() -> i64 { 1 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FileRecord {
+    #[serde(default)]
     pub id: String,
+    #[serde(default)]
     pub tenant_id: String,
+    #[serde(default)]
     pub file_key: String,
+    #[serde(default)]
     pub original_name: String,
+    #[serde(default)]
     pub mime_type: String,
+    #[serde(default)]
     pub size_bytes: i64,
+    #[serde(default)]
     pub backend_type: String,
+    #[serde(default)]
     pub backend_config_id: String,
     pub preview_url: Option<String>,
+    #[serde(default)]
     pub created_at: u64,
 }
 
@@ -378,9 +394,14 @@ pub struct HealthProbeResult {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AuditLog {
+    #[serde(default)]
     pub id: String,
+    #[serde(default)]
     pub action: String,
+    #[serde(default)]
     pub username: String,
+    #[serde(default)]
     pub detail: String,
+    #[serde(default)]
     pub created_at: u64,
 }

@@ -254,6 +254,61 @@
   .pagination-btn:hover:not(:disabled) { color: var(--text); background: var(--glass-hover); }
   .pagination-btn:disabled { opacity: 0.3; cursor: default; }
 
+
+  /* macOS-style dropdown */
+  .macos-dropdown { position: relative; user-select: none; }
+  .dropdown-trigger {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    width: 100%; max-width: 320px;
+    padding: 9px 14px; font-size: 13px; cursor: pointer;
+    background: var(--glass); color: var(--text);
+    border: 1px solid var(--border); border-radius: 10px;
+    transition: all 0.2s cubic-bezier(0.15, 1, 0.3, 1);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  }
+  .dropdown-trigger:hover { border-color: var(--input-focus); background: var(--glass-hover); }
+  .dropdown-trigger:active { transform: scale(0.985); }
+  .dropdown-trigger .chevron-down {
+    width: 14px; height: 14px; opacity: 0.4;
+    transition: transform 0.25s cubic-bezier(0.15, 1, 0.3, 1);
+  }
+  .macos-dropdown.open .dropdown-trigger { border-color: var(--input-focus); box-shadow: 0 0 0 3px rgba(255,255,255,0.03); }
+  .macos-dropdown.open .chevron-down { transform: rotate(180deg); opacity: 0.7; }
+  .dropdown-menu {
+    position: absolute; top: calc(100% + 6px); left: 0; right: 0;
+    background: var(--glass); border: 1px solid var(--border); border-radius: 10px;
+    backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px);
+    box-shadow: 0 16px 48px rgba(0,0,0,0.4);
+    opacity: 0; transform: translateY(-6px) scale(0.96);
+    pointer-events: none;
+    transition: all 0.2s cubic-bezier(0.15, 1, 0.3, 1);
+    z-index: 30; max-height: 260px; overflow-y: auto;
+  }
+  .macos-dropdown.open .dropdown-menu {
+    opacity: 1; transform: translateY(0) scale(1);
+    pointer-events: auto;
+  }
+  .dropdown-option {
+    display: flex; align-items: center;
+    padding: 9px 14px; font-size: 13px; cursor: pointer;
+    transition: background 0.12s ease;
+  }
+  .dropdown-option:first-child { border-radius: 10px 10px 0 0; }
+  .dropdown-option:last-child { border-radius: 0 0 10px 10px; }
+  .dropdown-option:hover { background: var(--glass-hover); }
+  .dropdown-option.selected { background: var(--input-bg); font-weight: 500; }
+  .dropdown-option-placeholder { opacity: 0.4; }
+  .dropdown-backdrop {
+    position: fixed; inset: 0; z-index: 29;
+    display: none;
+  }
+  .macos-dropdown.open + .dropdown-backdrop { display: block; }
+
+  /* audit action colors */
+  .audit-login { color: var(--success); font-weight: 500; }
+  .audit-logout { color: var(--warning); font-weight: 500; }
+  .audit-login_failure { color: var(--danger); font-weight: 500; }
+
   @keyframes pulse {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.5; }
@@ -418,6 +473,7 @@
           <button class="btn btn-primary btn-sm" onclick="openConfigModal()" data-i18n="configs.newConfig">+ New Config</button>
         </div>
         <div id="configs-list" class="space-y-3"></div>
+        <div id="configs-pagination" class="flex items-center justify-between mt-4"></div>
       </section>
 
       <!-- Tenants Tab -->
@@ -430,6 +486,7 @@
           <button class="btn btn-primary btn-sm" onclick="openTenantModal()" data-i18n="tenants.newTenant">+ New Tenant</button>
         </div>
         <div id="tenants-list" class="space-y-3"></div>
+        <div id="tenants-pagination" class="flex items-center justify-between mt-4"></div>
       </section>
 
       <!-- Files Tab -->
@@ -440,11 +497,17 @@
         </div>
         <div class="mb-4">
           <label class="text-xs opacity-50 block mb-1.5" data-i18n="files.selectTenant">Select Tenant</label>
-          <select id="files-tenant-select" class="w-full max-w-xs" onchange="loadFiles()">
-            <option value="">-- <span data-i18n="files.selectTenantPrompt">Select a tenant</span> --</option>
-          </select>
+          <div class="macos-dropdown" id="files-tenant-dropdown">
+            <div class="dropdown-trigger" onclick="toggleTenantDropdown()">
+              <span class="dropdown-trigger-text" id="files-tenant-trigger-text" data-i18n="files.selectTenantPrompt">Select a tenant</span>
+              <svg class="chevron-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+            <div class="dropdown-menu" id="files-tenant-menu"></div>
+          </div>
+          <div class="dropdown-backdrop" onclick="closeTenantDropdown()"></div>
         </div>
         <div id="files-table-container"></div>
+        <div id="files-pagination" class="flex items-center justify-between mt-4"></div>
       </section>
 
       <!-- Health Tab -->
@@ -665,6 +728,9 @@ var i18n = {
     'audit.prev': '上一页',
     'audit.next': '下一页',
     'audit.total': '共 {{count}} 条',
+    'audit.login': '登录',
+    'audit.logout': '登出',
+    'audit.loginFailure': '登录失败',
     'common.name': '名称',
     'common.type': '类型',
     'common.endpoint': '端点',
@@ -702,8 +768,94 @@ var i18n = {
     'toast.errorsFound': '{{count}} 个异常',
     'toast.allError': '全部异常',
   },
-  en: {}
-};
+  en: {
+    'sidebar.overview': 'OVERVIEW',
+    'sidebar.dashboard': 'Dashboard',
+    'sidebar.system': 'SYSTEM',
+    'sidebar.configs': 'Configs',
+    'sidebar.tenants': 'Tenants',
+    'sidebar.files': 'Files',
+    'sidebar.monitor': 'MONITOR',
+    'sidebar.health': 'Health',
+    'sidebar.audit': 'Audit Log',
+    'sidebar.admin': 'Admin',
+    'dashboard.title': 'Dashboard',
+    'dashboard.subtitle': 'System overview and quick status',
+    'dashboard.healthSummary': 'Health Summary',
+    'dashboard.viewHealth': 'View Health',
+    'dashboard.recentLogs': 'Recent Activity',
+    'dashboard.viewAll': 'View All',
+    'dashboard.configs': 'Configs',
+    'dashboard.activeTenants': 'Active / Total Tenants',
+    'dashboard.totalFiles': 'Total Files',
+    'dashboard.storageUsed': 'Storage Used',
+    'configs.title': 'Backend Configs',
+    'configs.subtitle': 'Manage S3, Dufs, and Redis storage backends',
+    'configs.newConfig': '+ New Config',
+    'tenants.title': 'Tenants',
+    'tenants.subtitle': 'Manage tenant accounts and quota limits',
+    'tenants.newTenant': '+ New Tenant',
+    'tenants.backendConfig': 'Default Backend Config',
+    'tenants.maxRequests': 'Max Requests / Day',
+    'tenants.maxStorage': 'Max Storage (bytes)',
+    'files.title': 'File Records',
+    'files.subtitle': 'View files across all tenants',
+    'files.selectTenant': 'Select Tenant',
+    'files.selectTenantPrompt': 'Select a tenant',
+    'health.title': 'Health Probes',
+    'health.subtitle': 'Backend connectivity status',
+    'health.probeAll': 'Probe All',
+    'health.ok': 'OK',
+    'health.error': 'Error',
+    'health.latency': 'Latency',
+    'health.probe': 'Probe',
+    'health.probing': 'Probing...',
+    'audit.title': 'Audit Logs',
+    'audit.subtitle': 'Track all administrative actions',
+    'audit.refresh': 'Refresh',
+    'audit.prev': 'Previous',
+    'audit.next': 'Next',
+    'audit.total': '{{count}} total',
+    'audit.login': 'Login',
+    'audit.logout': 'Logout',
+    'audit.loginFailure': 'Login Failed',
+    'common.name': 'Name',
+    'common.type': 'Type',
+    'common.endpoint': 'Endpoint',
+    'common.region': 'Region',
+    'common.bucket': 'Bucket',
+    'common.accessKeyId': 'Access Key ID',
+    'common.secretKey': 'Secret Access Key',
+    'common.username': 'Username',
+    'common.password': 'Password',
+    'common.dbIndex': 'DB Index',
+    'common.cancel': 'Cancel',
+    'common.save': 'Save',
+    'common.delete': 'Delete',
+    'common.active': 'Active',
+    'common.cannotUndo': 'This action cannot be undone.',
+    'common.noConfigs': 'No configs yet',
+    'common.noConfigsHint': 'Create one to get started',
+    'common.noTenants': 'No tenants yet',
+    'common.noTenantsHint': 'Create one to get started',
+    'common.noFiles': 'No files for this tenant',
+    'common.selectTenantFirst': 'Select a tenant to view files',
+    'common.loadFailed': 'Failed to load',
+    'login.subtitle': 'Sign in with your GitHub account to continue',
+    'login.btnText': 'Sign in with GitHub',
+    'toast.configCreated': 'Config created',
+    'toast.configUpdated': 'Config updated',
+    'toast.configDeleted': 'Config deleted',
+    'toast.tenantCreated': 'Tenant created',
+    'toast.tenantUpdated': 'Tenant updated',
+    'toast.tenantDeleted': 'Tenant deleted',
+    'toast.sessionExpired': 'Session expired',
+    'toast.connectionOk': 'Connection OK',
+    'toast.probeComplete': 'Probe complete',
+    'toast.allOk': 'All OK',
+    'toast.errorsFound': '{{count}} errors found',
+    'toast.allError': 'All errors',
+  },};
 var currentLang = 'en';
 
 function t(key, repl) {
@@ -730,7 +882,7 @@ function translateUI() {
     }
   });
   // Update placeholder options
-  updateFileTenantSelect();
+  renderTenantDropdown();
   // Re-render current tab to pick up translated labels
   if (currentUser) refreshCurrentTab();
 }
@@ -752,6 +904,10 @@ var currentTab = 'dashboard';
 var currentUser = null;
 var configs = [];
 var tenants = [];
+var configPageSize = 20, configOffset = 0, configTotal = 0;
+var tenantPageSize = 20, tenantOffset = 0, tenantTotal = 0;
+var filePageSize = 50, fileOffset = 0, fileTotal = 0;
+var filesTenantId = null;
 var auditPageSize = 20;
 var auditOffset = 0;
 var auditTotal = 0;
@@ -792,7 +948,7 @@ async function api(path, opts) {
   opts = opts || {};
   var isGet = !opts.method || opts.method === 'GET';
   var headers = opts.headers || {};
-  if (!isGet) headers['Content-Type'] = 'application/json';
+  if (!isGet && opts.body) headers['Content-Type'] = 'application/json';
   try {
     var res = await fetch(path, {
       method: opts.method || 'GET',
@@ -801,6 +957,8 @@ async function api(path, opts) {
       credentials: 'same-origin',
     });
     if (res.status === 401) { showLogin(); throw new Error(t('toast.sessionExpired')); }
+    var ct = res.headers.get('Content-Type') || '';
+    if (ct.indexOf('application/json') === -1) throw new Error('Unexpected response from ' + path + ' (status ' + res.status + ')');
     var data = await res.json();
     if (!res.ok) throw new Error(data.error || data.message || 'Request failed');
     return data;
@@ -906,7 +1064,7 @@ function loadCurrentTab() {
   if (currentTab === 'dashboard') loadDashboard();
   else if (currentTab === 'configs') loadConfigs();
   else if (currentTab === 'tenants') loadTenants();
-  else if (currentTab === 'files') loadTenantsForSelect();
+  else if (currentTab === 'files') loadTenantsForDropdown();
   else if (currentTab === 'health') loadHealth();
   else if (currentTab === 'audit') loadAuditLogs(0);
 }
@@ -995,8 +1153,9 @@ function renderDashAuditLogs() {
     return;
   }
   el.innerHTML = dashAuditLogs.map(function(l) {
+    var cls = 'audit-' + l.action;
     return '<div class="flex items-center gap-3 py-2 border-b hairline last:border-0">' +
-      '<span class="text-xs font-mono opacity-60 w-14 flex-shrink-0">' + esc(l.action) + '</span>' +
+      '<span class="text-xs font-mono w-14 flex-shrink-0 ' + cls + '">' + esc(l.action) + '</span>' +
       '<span class="text-xs flex-1 truncate">' + esc(l.detail || '—') + '</span>' +
       '<span class="text-xs opacity-30 flex-shrink-0">' + fmtTs(l.created_at) + '</span>' +
     '</div>';
@@ -1004,18 +1163,22 @@ function renderDashAuditLogs() {
 }
 
 // ── Configs CRUD ──
-async function loadConfigs() {
+async function loadConfigs(offset) {
+  configOffset = offset || 0;
   try {
-    var res = await api('/api/admin/configs');
+    var res = await api('/api/admin/configs?offset=' + configOffset + '&limit=' + configPageSize);
     configs = (res.data && res.data.configs) || [];
+    configTotal = (res.data && res.data.total != null) ? res.data.total : configs.length;
     renderConfigs();
   } catch (_) {}
 }
 
 function renderConfigs() {
   var el = document.getElementById('configs-list');
+  var pagEl = document.getElementById('configs-pagination');
   if (configs.length === 0) {
     el.innerHTML = '<div class="empty-state"><p class="text-sm">' + t('common.noConfigs') + '</p><p class="text-xs mt-1">' + t('common.noConfigsHint') + '</p></div>';
+    pagEl.innerHTML = '';
     return;
   }
   el.innerHTML = configs.map(function(c) {
@@ -1034,6 +1197,13 @@ function renderConfigs() {
       '</div>' +
     '</div>';
   }).join('');
+
+  pagEl.innerHTML = configTotal > configPageSize ?
+    '<span class="text-xs opacity-40">' + t('audit.total', {count: configTotal}) + '</span>' +
+    '<div class="flex gap-2">' +
+      '<button class="pagination-btn" ' + (configOffset === 0 ? 'disabled' : '') + ' onclick="loadConfigs(' + Math.max(0, configOffset - configPageSize) + ')">' + t('audit.prev') + '</button>' +
+      '<button class="pagination-btn" ' + (configOffset + configPageSize >= configTotal ? 'disabled' : '') + ' onclick="loadConfigs(' + (configOffset + configPageSize) + ')">' + t('audit.next') + '</button>' +
+    '</div>' : '';
 }
 
 function openConfigModal() {
@@ -1162,10 +1332,13 @@ async function testConfig(id) {
 }
 
 // ── Tenants CRUD ──
-async function loadTenants() {
+async function loadTenants(offset) {
+  tenantOffset = offset || 0;
   try {
-    var res = await api('/api/admin/tenants');
-    tenants = Array.isArray(res.data) ? res.data : (res.data && res.data.tenants || []);
+    var res = await api('/api/admin/tenants?offset=' + tenantOffset + '&limit=' + tenantPageSize);
+    var data = res.data || {};
+    tenants = data.tenants || [];
+    tenantTotal = data.total != null ? data.total : tenants.length;
     renderTenants();
   } catch (e) {
     document.getElementById('tenants-list').innerHTML = '<div class="empty-state"><p class="text-sm">' + t('common.loadFailed') + '</p><p class="text-xs mt-1">' + esc(e.message || '') + '</p></div>';
@@ -1174,8 +1347,10 @@ async function loadTenants() {
 
 function renderTenants() {
   var el = document.getElementById('tenants-list');
+  var pagEl = document.getElementById('tenants-pagination');
   if (tenants.length === 0) {
     el.innerHTML = '<div class="empty-state"><p class="text-sm">' + t('common.noTenants') + '</p><p class="text-xs mt-1">' + t('common.noTenantsHint') + '</p></div>';
+    pagEl.innerHTML = '';
     return;
   }
   el.innerHTML = tenants.map(function(t) {
@@ -1204,6 +1379,13 @@ function renderTenants() {
       '</div>' +
     '</div>';
   }).join('');
+
+  pagEl.innerHTML = tenantTotal > tenantPageSize ?
+    '<span class="text-xs opacity-40">' + t('audit.total', {count: tenantTotal}) + '</span>' +
+    '<div class="flex gap-2">' +
+      '<button class="pagination-btn" ' + (tenantOffset === 0 ? 'disabled' : '') + ' onclick="loadTenants(' + Math.max(0, tenantOffset - tenantPageSize) + ')">' + t('audit.prev') + '</button>' +
+      '<button class="pagination-btn" ' + (tenantOffset + tenantPageSize >= tenantTotal ? 'disabled' : '') + ' onclick="loadTenants(' + (tenantOffset + tenantPageSize) + ')">' + t('audit.next') + '</button>' +
+    '</div>' : '';
 }
 
 async function openTenantModal() {
@@ -1240,7 +1422,7 @@ function closeTenantModal() {
 
 async function populateBackendConfigSelect(selectedId) {
   try {
-    var res = await api('/api/admin/configs');
+    var res = await api('/api/admin/configs?limit=1000');
     var list = (res.data && res.data.configs) || [];
     var sel = document.getElementById('tnt-backend-config');
     sel.innerHTML = list.map(function(c) {
@@ -1289,39 +1471,82 @@ function deleteTenant(id, name) {
 }
 
 // ── Files ──
-async function loadTenantsForSelect() {
+async function loadTenantsForDropdown() {
   try {
-    var res = await api('/api/admin/tenants');
+    var res = await api('/api/admin/tenants?limit=1000');
     var list = Array.isArray(res.data) ? res.data : (res.data && res.data.tenants || []);
-    var sel = document.getElementById('files-tenant-select');
-    var cur = sel.value;
-    sel.innerHTML = '<option value="">-- ' + t('files.selectTenantPrompt') + ' --</option>' +
-      list.map(function(t) {
-        return '<option value="' + t.id + '"' + (t.id === cur ? ' selected' : '') + '>' + esc(t.name) + '</option>';
-      }).join('');
-    if (cur) loadFiles();
+    var menu = document.getElementById('files-tenant-menu');
+    menu.innerHTML = list.map(function(t) {
+      return '<div class="dropdown-option' + (t.id === filesTenantId ? ' selected' : '') + '" onclick="selectTenantOption(\'' + t.id + '\',\'' + esc(t.name) + '\')">' +
+        '<span>' + esc(t.name) + '</span>' +
+        (t.id === filesTenantId ? '<svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>' : '') +
+      '</div>';
+    }).join('');
+    if (list.length === 0) {
+      menu.innerHTML = '<div class="dropdown-option" style="opacity:0.4">' + t('common.noTenants') + '</div>';
+    }
   } catch (_) {}
 }
 
-function updateFileTenantSelect() {
-  var sel = document.getElementById('files-tenant-select');
-  if (sel && sel.options.length > 0) {
-    sel.options[0].textContent = '-- ' + t('files.selectTenantPrompt') + ' --';
+function renderTenantDropdown() {
+  var trigger = document.getElementById('files-tenant-trigger-text');
+  if (filesTenantId) {
+    trigger.textContent = trigger.getAttribute('data-selected-text') || 'Selected';
+  } else {
+    trigger.textContent = t('files.selectTenantPrompt');
   }
 }
 
-async function loadFiles() {
-  var tenantId = document.getElementById('files-tenant-select').value;
+function toggleTenantDropdown() {
+  var dd = document.getElementById('files-tenant-dropdown');
+  var menu = document.getElementById('files-tenant-menu');
+  var backdrop = dd.nextElementSibling;
+  var isOpen = dd.classList.contains('dropdown-open');
+  if (isOpen) {
+    closeTenantDropdown();
+  } else {
+    loadTenantsForDropdown();
+    dd.classList.add('dropdown-open');
+    menu.classList.add('open');
+    backdrop.classList.add('open');
+  }
+}
+
+function closeTenantDropdown() {
+  var dd = document.getElementById('files-tenant-dropdown');
+  var menu = document.getElementById('files-tenant-menu');
+  var backdrop = dd.nextElementSibling;
+  dd.classList.remove('dropdown-open');
+  menu.classList.remove('open');
+  backdrop.classList.remove('open');
+}
+
+function selectTenantOption(id, name) {
+  filesTenantId = id;
+  fileOffset = 0;
+  var trigger = document.getElementById('files-tenant-trigger-text');
+  trigger.textContent = name;
+  trigger.setAttribute('data-selected-text', name);
+  closeTenantDropdown();
+  loadFiles();
+}
+
+async function loadFiles(offset) {
+  fileOffset = offset || 0;
   var el = document.getElementById('files-table-container');
-  if (!tenantId) {
+  var pagEl = document.getElementById('files-pagination');
+  if (!filesTenantId) {
     el.innerHTML = '<div class="empty-state"><p class="text-sm">' + t('common.selectTenantFirst') + '</p></div>';
+    pagEl.innerHTML = '';
     return;
   }
   try {
-    var res = await api('/api/admin/tenants/' + tenantId + '/files');
+    var res = await api('/api/admin/tenants/' + filesTenantId + '/files?offset=' + fileOffset + '&limit=' + filePageSize);
     var files = (res.data && res.data.files) || [];
+    fileTotal = (res.data && res.data.total != null) ? res.data.total : files.length;
     if (files.length === 0) {
       el.innerHTML = '<div class="empty-state"><p class="text-sm">' + t('common.noFiles') + '</p></div>';
+      pagEl.innerHTML = '';
       return;
     }
     el.innerHTML = '<div class="card overflow-hidden"><table class="w-full text-sm"><thead><tr class="border-b hairline text-xs opacity-40">' +
@@ -1343,8 +1568,16 @@ async function loadFiles() {
           '</tr>';
       }).join('') +
       '</tbody></table></div>';
+
+    pagEl.innerHTML = fileTotal > filePageSize ?
+      '<span class="text-xs opacity-40">' + t('audit.total', {count: fileTotal}) + '</span>' +
+      '<div class="flex gap-2">' +
+        '<button class="pagination-btn" ' + (fileOffset === 0 ? 'disabled' : '') + ' onclick="loadFiles(' + Math.max(0, fileOffset - filePageSize) + ')">' + t('audit.prev') + '</button>' +
+        '<button class="pagination-btn" ' + (fileOffset + filePageSize >= fileTotal ? 'disabled' : '') + ' onclick="loadFiles(' + (fileOffset + filePageSize) + ')">' + t('audit.next') + '</button>' +
+      '</div>' : '';
   } catch (_) {
     el.innerHTML = '<div class="empty-state"><p class="text-sm">' + t('common.loadFailed') + '</p></div>';
+    pagEl.innerHTML = '';
   }
 }
 
@@ -1482,8 +1715,9 @@ function renderAuditLogs() {
     '<th class="text-right py-3 px-4 font-medium w-40">Time</th>' +
     '</tr></thead><tbody>' +
     auditLogs.map(function(l) {
+      var cls = 'audit-' + l.action;
       return '<tr class="row-hover border-b hairline">' +
-        '<td class="py-2.5 px-4 font-mono text-xs">' + esc(l.action) + '</td>' +
+        '<td class="py-2.5 px-4 font-mono text-xs ' + cls + '">' + esc(l.action) + '</td>' +
         '<td class="py-2.5 px-4 text-xs">' + esc(l.username) + '</td>' +
         '<td class="py-2.5 px-4 text-xs truncate max-w-[300px]">' + esc(l.detail || '—') + '</td>' +
         '<td class="py-2.5 px-4 text-right text-xs opacity-40">' + fmtTs(l.created_at) + '</td>' +

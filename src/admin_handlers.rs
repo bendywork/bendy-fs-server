@@ -8,7 +8,7 @@ use crate::dufs_proxy;
 use crate::redis_proxy;
 use crate::s3_proxy;
 use crate::types::{
-    ApiResponse, AuditLog, BackendConfig, BackendType, ConfigListData, ConfigListItem,
+    ApiResponse, AuditLog, BackendConfig, BackendType, ConfigListItem,
     CreateBackendConfigInput, CreateTenantInput, HealthProbeResult,
     PresignedDownloadInput, PresignedUrlInput,
     UpdateBackendConfigInput, UpdateTenantInput,
@@ -59,7 +59,7 @@ macro_rules! require_admin_uname {
     };
 }
 
-async fn audit_log(env: &Env, username: &str, action: &str, detail: &str) -> Result<()> {
+pub async fn audit_log(env: &Env, username: &str, action: &str, detail: &str) -> Result<()> {
     let log = AuditLog {
         id: uuid::Uuid::new_v4().to_string(),
         action: action.to_string(),
@@ -87,12 +87,29 @@ pub async fn handle_test(req: Request, env: &Env, config_id: &str) -> Result<Res
     result
 }
 
-/// GET /api/admin/configs — list all configs (without secret keys)
+/// GET /api/admin/configs — list configs with pagination (without secret keys)
 pub async fn handle_list(req: Request, env: &Env) -> Result<Response> {
     require_admin!(&req, env);
-    let configs = config_store::list_configs(env).await?;
+    let url = req.url()?;
+    let offset: usize = url
+        .query_pairs()
+        .find(|(k, _)| k == "offset")
+        .and_then(|(_, v)| v.parse().ok())
+        .unwrap_or(0);
+    let limit: usize = url
+        .query_pairs()
+        .find(|(k, _)| k == "limit")
+        .and_then(|(_, v)| v.parse().ok())
+        .unwrap_or(20);
+    let configs = config_store::list_configs(env, offset, limit).await?;
+    let total = config_store::count_configs(env).await?;
     let items: Vec<ConfigListItem> = configs.iter().map(ConfigListItem::from).collect();
-    Response::from_json(&ApiResponse::ok(ConfigListData { configs: items }))
+    Response::from_json(&ApiResponse::ok(serde_json::json!({
+        "configs": items,
+        "total": total,
+        "offset": offset,
+        "limit": limit
+    })))
 }
 
 /// GET /api/admin/configs/:id — get single config (with secret key)
@@ -395,10 +412,21 @@ fn generate_api_secret() -> String {
     uuid::Uuid::new_v4().to_string().replace('-', "")
 }
 
-/// GET /api/admin/tenants
+/// GET /api/admin/tenants?offset=&limit=
 pub async fn handle_list_tenants(req: Request, env: &Env) -> Result<Response> {
     require_admin!(&req, env);
-    let tenants = match db::list_tenants(env).await {
+    let url = req.url()?;
+    let offset: i64 = url
+        .query_pairs()
+        .find(|(k, _)| k == "offset")
+        .and_then(|(_, v)| v.parse().ok())
+        .unwrap_or(0);
+    let limit: i64 = url
+        .query_pairs()
+        .find(|(k, _)| k == "limit")
+        .and_then(|(_, v)| v.parse().ok())
+        .unwrap_or(20);
+    let tenants = match db::list_tenants(env, offset, limit).await {
         Ok(t) => t,
         Err(e) => {
             return Ok(Response::from_json(&ApiResponse::<()>::err(
@@ -407,7 +435,13 @@ pub async fn handle_list_tenants(req: Request, env: &Env) -> Result<Response> {
             ))?.with_status(500));
         }
     };
-    Response::from_json(&ApiResponse::ok(tenants))
+    let total = db::count_tenants(env).await?;
+    Response::from_json(&ApiResponse::ok(serde_json::json!({
+        "tenants": tenants,
+        "total": total,
+        "offset": offset,
+        "limit": limit
+    })))
 }
 
 /// POST /api/admin/tenants
@@ -532,16 +566,16 @@ pub async fn handle_list_tenant_files(req: Request, env: &Env, tenant_id: &str) 
 /// GET /api/admin/stats
 pub async fn handle_stats(req: Request, env: &Env) -> Result<Response> {
     require_admin!(&req, env);
-    let configs = config_store::list_configs(env).await?;
+    let configs_count = config_store::count_configs(env).await?;
     let mut stats = db::get_stats(env).await?;
-    stats.total_configs = configs.len();
+    stats.total_configs = configs_count;
     Response::from_json(&ApiResponse::ok(stats))
 }
 
 /// GET /api/admin/health
 pub async fn handle_health(req: Request, env: &Env) -> Result<Response> {
     require_admin!(&req, env);
-    let configs = config_store::list_configs(env).await?;
+    let configs = config_store::list_configs(env, 0, 10000).await?;
 
     let mut results: Vec<HealthProbeResult> = Vec::new();
     for config in &configs {
