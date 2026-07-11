@@ -1,4 +1,4 @@
-use std::time::{SystemTime, UNIX_EPOCH};
+use web_time::{SystemTime, UNIX_EPOCH};
 use worker::*;
 
 use crate::auth;
