@@ -1,5 +1,6 @@
 /target
-/build
+/build/*
+!/build/worker.mjs
 /node_modules
 /dist
 /.wrangler
