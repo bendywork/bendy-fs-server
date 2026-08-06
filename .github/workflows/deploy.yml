@@ -22,7 +22,10 @@ jobs:
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
       - name: Build WASM
-        run: wasm-pack build --target web --no-opt
+        run: |
+          wasm-pack build --target web --no-opt
+          cp pkg/bendy_fs_server.js build/
+          cp pkg/bendy_fs_server_bg.wasm build/
         env:
           RUSTFLAGS: ""
 
