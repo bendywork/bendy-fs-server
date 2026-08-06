@@ -23,6 +23,8 @@ jobs:
 
       - name: Build WASM
         run: wasm-pack build --target web --no-opt
+        env:
+          RUSTFLAGS: ""
 
       - name: Deploy to Cloudflare Workers
         uses: cloudflare/wrangler-action@v3
