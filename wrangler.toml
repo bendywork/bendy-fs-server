@@ -1,12 +1,12 @@
 name = "bendy-fs-server"
 main = "build/worker.mjs"
 compatibility_date = "2025-07-10"
+account_id = "8fb5030dfc34621678a37a8abc90c7c2"
 compatibility_flags = ["nodejs_compat"]
 
 [[kv_namespaces]]
 binding = "BENDY_FS_CONFIGS"
-id = "d633d4280dca44d3a03eb93728039bd2"
-preview_id = "d633d4280dca44d3a03eb93728039bd2"
+id = "64df8d6d63514c54b4d296edc0464853"
 
 [vars]
 # Set via `wrangler secret put`
@@ -19,7 +19,7 @@ preview_id = "d633d4280dca44d3a03eb93728039bd2"
 [[d1_databases]]
 binding = "BENDY_FS_DB"
 database_name = "bendy-fs-db"
-database_id = "be1939fd-eda9-4d7a-8434-e02176742152"
+database_id = "554f2c34-4fdb-4ac9-bf3b-6081bd67a853"
 
 [observability]
 enabled = true
