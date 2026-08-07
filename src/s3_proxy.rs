@@ -219,26 +219,34 @@ pub async fn test_connection(env: &Env, config_id: &str) -> Result<Response> {
     let fetch_req = Request::new_with_init(&url, &init)?;
 
     match Fetch::Request(fetch_req).send().await {
-        Ok(resp) => {
+        Ok(mut resp) => {
             let status = resp.status_code();
-            let reachable = status == 200 || status == 403 || status == 404;
+            let body = resp.text().await.unwrap_or_default();
+            let (ok, message) = match status {
+                200 => (true, format!("S3 reachable — bucket '{}' accessible (HTTP 200)", config.bucket)),
+                403 => {
+                    let region = if config.region.is_empty() { "us-east-1" } else { &config.region };
+                    (false, format!(
+                        "Auth failed (HTTP 403). Check access_key/secret and region (currently '{}'). Response: {}",
+                        region, body
+                    ))
+                }
+                404 => (true, format!(
+                    "Bucket '{}' not found (HTTP 404). Check bucket name and region.",
+                    config.bucket
+                )),
+                _ => (false, format!("Unexpected HTTP {}: {}", status, body)),
+            };
             Response::from_json(&serde_json::json!({
                 "success": true,
-                "data": {
-                    "ok": reachable,
-                    "message": if reachable {
-                        format!("S3 endpoint reachable (HTTP {})", status)
-                    } else {
-                        format!("Unexpected response (HTTP {})", status)
-                    }
-                }
+                "data": { "ok": ok, "message": message }
             }))
         }
         Err(e) => Response::from_json(&serde_json::json!({
             "success": true,
             "data": {
                 "ok": false,
-                "message": format!("Connection failed: {}", e)
+                "message": format!("Connection failed: {} — check URL {}", e, config.endpoint)
             }
         })),
     }
