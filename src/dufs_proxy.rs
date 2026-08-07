@@ -202,26 +202,30 @@ pub async fn test_connection(env: &Env, config_id: &str) -> Result<Response> {
     let fetch_req = Request::new_with_init(&url, &init)?;
 
     match Fetch::Request(fetch_req).send().await {
-        Ok(resp) => {
+        Ok(mut resp) => {
             let status = resp.status_code();
-            let reachable = status == 200 || status == 401 || status == 403 || status == 404;
+            let body = resp.text().await.unwrap_or_default();
+            let (ok, message) = match status {
+                200 => (true, format!("Dufs reachable — endpoint '{}' accessible (HTTP 200)", url)),
+                401 => (false, format!(
+                    "Auth failed (HTTP 401). Check username/password. Response: {}", body
+                )),
+                403 => (false, format!(
+                    "Access denied (HTTP 403). Check permissions. Response: {}", body
+                )),
+                404 => (true, format!("Dufs server responded (HTTP 404) — endpoint '{}' is reachable", url)),
+                _ => (false, format!("Unexpected HTTP {}: {}", status, body)),
+            };
             Response::from_json(&serde_json::json!({
                 "success": true,
-                "data": {
-                    "ok": reachable,
-                    "message": if reachable {
-                        format!("Dufs endpoint reachable (HTTP {})", status)
-                    } else {
-                        format!("Unexpected response (HTTP {})", status)
-                    }
-                }
+                "data": { "ok": ok, "message": message }
             }))
         }
         Err(e) => Response::from_json(&serde_json::json!({
             "success": true,
             "data": {
                 "ok": false,
-                "message": format!("Connection failed: {}", e)
+                "message": format!("Connection failed: {} — check URL {}", e, url)
             }
         })),
     }
