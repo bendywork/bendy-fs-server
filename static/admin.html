@@ -607,15 +607,6 @@
         <label class="text-xs opacity-50 block mb-1.5" data-i18n="common.dbIndex">DB Index</label>
         <input type="number" id="cfg-db-index" class="w-full" placeholder="0" min="0">
       </div>
-      <!-- OSS Preview -->
-      <div class="cfg-s3">
-        <label class="text-xs opacity-50 block mb-1.5">OSS Preview RPC URL</label>
-        <input type="text" id="cfg-oss-preview-url" class="w-full" placeholder="https://...">
-      </div>
-      <div class="cfg-s3">
-        <label class="text-xs opacity-50 block mb-1.5">OSS Preview Cookie</label>
-        <input type="text" id="cfg-oss-preview-cookie" class="w-full" placeholder="cookie=value">
-      </div>
       <div class="flex justify-end gap-2 pt-2">
         <button type="button" class="btn btn-secondary btn-sm" onclick="closeConfigModal()" data-i18n="common.cancel">Cancel</button>
         <button type="submit" class="btn btn-primary btn-sm" data-i18n="common.save">Save</button>
@@ -1230,8 +1221,6 @@ function openConfigModal() {
   document.getElementById('cfg-redis-password').value = '';
   document.getElementById('cfg-redis-password').placeholder = '';
   document.getElementById('cfg-db-index').value = '';
-  document.getElementById('cfg-oss-preview-url').value = '';
-  document.getElementById('cfg-oss-preview-cookie').value = '';
   onConfigTypeChange();
   document.getElementById('config-modal').style.display = 'flex';
 }
@@ -1258,8 +1247,6 @@ function editConfig(id) {
     document.getElementById('cfg-redis-password').value = '';
     document.getElementById('cfg-redis-password').placeholder = '(unchanged)';
     document.getElementById('cfg-db-index').value = full.db_index != null ? full.db_index : '';
-    document.getElementById('cfg-oss-preview-url').value = full.oss_preview_rpc_url || '';
-    document.getElementById('cfg-oss-preview-cookie').value = full.oss_preview_cookie || '';
     onConfigTypeChange();
     document.getElementById('config-modal').style.display = 'flex';
   }).catch(function(){});
@@ -1292,8 +1279,6 @@ async function saveConfig(e) {
     var sak = document.getElementById('cfg-secret-access-key').value;
     if (sak) body.secret_access_key = sak;
     body.force_path_style = document.getElementById('cfg-force-path-style').checked;
-    body.oss_preview_rpc_url = document.getElementById('cfg-oss-preview-url').value;
-    body.oss_preview_cookie = document.getElementById('cfg-oss-preview-cookie').value;
   }
   if (type === 'dufs') {
     body.username = document.getElementById('cfg-dufs-username').value || null;
