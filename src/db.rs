@@ -207,11 +207,12 @@ pub async fn count_file_records(env: &Env, tenant_id: &str) -> Result<i64> {
 pub async fn create_tenant(env: &Env, tenant: &Tenant) -> Result<()> {
     let d = db(env)?;
     let is_active_int = tenant.is_active as f64;
+    let public_files_int = tenant.public_files as f64;
     d.prepare(
         "INSERT INTO tenants (id, name, api_key, api_secret, default_backend_config_id, \
          max_requests_per_day, max_storage_bytes, requests_used_today, storage_used_bytes, \
-         last_request_date, is_active, created_at, updated_at) \
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 0, 0, '', ?8, ?9, ?10)"
+         last_request_date, is_active, public_files, created_at, updated_at) \
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 0, 0, '', ?8, ?9, ?10, ?11)"
     )
     .bind(&[
         tenant.id.as_str().into(),
@@ -222,6 +223,7 @@ pub async fn create_tenant(env: &Env, tenant: &Tenant) -> Result<()> {
         JsValue::from_f64(tenant.max_requests_per_day as f64),
         JsValue::from_f64(tenant.max_storage_bytes as f64),
         JsValue::from_f64(is_active_int),
+        JsValue::from_f64(public_files_int),
         JsValue::from_f64(tenant.created_at as f64),
         JsValue::from_f64(tenant.updated_at as f64),
     ])?
@@ -232,10 +234,11 @@ pub async fn create_tenant(env: &Env, tenant: &Tenant) -> Result<()> {
 pub async fn update_tenant(env: &Env, tenant_id: &str, updated: &Tenant) -> Result<()> {
     let d = db(env)?;
     let is_active_int = updated.is_active as f64;
+    let public_files_int = updated.public_files as f64;
     d.prepare(
         "UPDATE tenants SET name = ?1, default_backend_config_id = ?2, \
          max_requests_per_day = ?3, max_storage_bytes = ?4, is_active = ?5, \
-         updated_at = ?6 WHERE id = ?7"
+         public_files = ?6, updated_at = ?7 WHERE id = ?8"
     )
     .bind(&[
         updated.name.as_str().into(),
@@ -243,6 +246,7 @@ pub async fn update_tenant(env: &Env, tenant_id: &str, updated: &Tenant) -> Resu
         JsValue::from_f64(updated.max_requests_per_day as f64),
         JsValue::from_f64(updated.max_storage_bytes as f64),
         JsValue::from_f64(is_active_int),
+        JsValue::from_f64(public_files_int),
         JsValue::from_f64(updated.updated_at as f64),
         tenant_id.into(),
     ])?
@@ -311,6 +315,10 @@ pub async fn ensure_schema(env: &Env) -> Result<()> {
     d.prepare(
         "CREATE INDEX IF NOT EXISTS idx_audit_logs_created ON audit_logs(created_at DESC)"
     ).run().await?;
+    // Migration: add public_files column (ignore error if already exists)
+    let _ = d.prepare(
+        "ALTER TABLE tenants ADD COLUMN public_files INTEGER DEFAULT 0"
+    ).run().await;
     Ok(())
 }
 

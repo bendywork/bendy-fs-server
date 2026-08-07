@@ -464,6 +464,7 @@ pub async fn handle_create_tenant(mut req: Request, env: &Env) -> Result<Respons
         storage_used_bytes: 0,
         last_request_date: String::new(),
         is_active: 1,
+        public_files: if input.public_files { 1 } else { 0 },
         created_at: now,
         updated_at: now,
     };
@@ -509,6 +510,7 @@ pub async fn handle_update_tenant(mut req: Request, env: &Env, tenant_id: &str) 
         max_requests_per_day: input.max_requests_per_day.unwrap_or(existing.max_requests_per_day),
         max_storage_bytes: input.max_storage_bytes.unwrap_or(existing.max_storage_bytes),
         is_active: input.is_active.map(|b| if b { 1 } else { 0 }).unwrap_or(existing.is_active),
+        public_files: input.public_files.map(|b| if b { 1 } else { 0 }).unwrap_or(existing.public_files),
         updated_at: now_ts(),
         ..existing
     };

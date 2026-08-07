@@ -251,6 +251,8 @@ pub struct Tenant {
     pub created_at: u64,
     #[serde(default)]
     pub updated_at: u64,
+    #[serde(default)]
+    pub public_files: i64,
 }
 
 fn default_active() -> i64 { 1 }
@@ -294,6 +296,8 @@ pub struct CreateTenantInput {
     pub max_requests_per_day: i64,
     #[serde(default = "default_max_storage")]
     pub max_storage_bytes: i64,
+    #[serde(default)]
+    pub public_files: bool,
 }
 
 fn default_max_requests() -> i64 { 10000 }
@@ -306,6 +310,7 @@ pub struct UpdateTenantInput {
     pub max_requests_per_day: Option<i64>,
     pub max_storage_bytes: Option<i64>,
     pub is_active: Option<bool>,
+    pub public_files: Option<bool>,
 }
 
 #[derive(Debug, Deserialize)]

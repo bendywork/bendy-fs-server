@@ -656,6 +656,10 @@
         <input type="checkbox" id="tnt-is-active" class="w-4 h-4" checked>
         <label class="text-xs opacity-70" data-i18n="common.active">Active</label>
       </div>
+      <div class="flex items-center gap-2" id="tnt-public-files-group">
+        <input type="checkbox" id="tnt-public-files" class="w-4 h-4">
+        <label class="text-xs opacity-70" data-i18n="tenants.publicFiles">Public Files</label>
+      </div>
       <div class="flex justify-end gap-2 pt-2">
         <button type="button" class="btn btn-secondary btn-sm" onclick="closeTenantModal()" data-i18n="common.cancel">Cancel</button>
         <button type="submit" class="btn btn-primary btn-sm" data-i18n="common.save">Save</button>
@@ -710,6 +714,7 @@ var i18n = {
     'tenants.backendConfig': '默认后端配置',
     'tenants.maxRequests': '每日最大请求',
     'tenants.maxStorage': '最大存储 (bytes)',
+    'tenants.publicFiles': '公开文件 (无需认证访问)',
     'files.title': '文件记录',
     'files.subtitle': '查看所有租户的文件',
     'files.selectTenant': '选择租户',
@@ -798,6 +803,7 @@ var i18n = {
     'tenants.backendConfig': 'Default Backend Config',
     'tenants.maxRequests': 'Max Requests / Day',
     'tenants.maxStorage': 'Max Storage (bytes)',
+    'tenants.publicFiles': 'Public Files (no auth required)',
     'files.title': 'File Records',
     'files.subtitle': 'View files across all tenants',
     'files.selectTenant': 'Select Tenant',
@@ -1361,6 +1367,7 @@ function renderTenants() {
         '<div class="flex items-center gap-3">' +
           '<p class="text-sm font-medium">' + esc(t.name) + '</p>' +
           (t.is_active ? '<span class="badge badge-active">Active</span>' : '<span class="badge badge-inactive">Inactive</span>') +
+          (t.public_files ? '<span class="badge" style="background:rgba(59,130,246,0.15);color:#3b82f6">Public</span>' : '') +
         '</div>' +
         '<div class="flex items-center gap-1">' +
           '<button class="btn btn-ghost btn-sm text-xs" onclick="editTenant(\'' + t.id + '\')">Edit</button>' +
@@ -1396,6 +1403,8 @@ async function openTenantModal() {
   document.getElementById('tnt-max-storage').value = '10737418240';
   document.getElementById('tnt-is-active').checked = true;
   document.getElementById('tnt-active-group').style.display = 'none';
+  document.getElementById('tnt-public-files').checked = false;
+  document.getElementById('tnt-public-files-group').style.display = '';
   await populateBackendConfigSelect();
   document.getElementById('tenant-modal').style.display = 'flex';
 }
@@ -1411,6 +1420,8 @@ async function editTenant(id) {
     document.getElementById('tnt-max-storage').value = t.max_storage_bytes;
     document.getElementById('tnt-is-active').checked = t.is_active;
     document.getElementById('tnt-active-group').style.display = 'flex';
+    document.getElementById('tnt-public-files').checked = !!t.public_files;
+    document.getElementById('tnt-public-files-group').style.display = '';
     await populateBackendConfigSelect(t.default_backend_config_id);
     document.getElementById('tenant-modal').style.display = 'flex';
   } catch (_) {}
@@ -1445,6 +1456,9 @@ async function saveTenant(e) {
   };
   if (id) {
     body.is_active = document.getElementById('tnt-is-active').checked;
+    body.public_files = document.getElementById('tnt-public-files').checked;
+  } else {
+    body.public_files = document.getElementById('tnt-public-files').checked;
   }
   try {
     if (id) {

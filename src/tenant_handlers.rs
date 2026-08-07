@@ -136,8 +136,8 @@ pub async fn handle_tenant_upload(mut req: Request, env: &Env) -> Result<Respons
             id: uuid::Uuid::new_v4().to_string(),
             tenant_id: tenant_id.clone(),
             file_key: key.clone(),
-            original_name: filename,
-            mime_type,
+            original_name: filename.clone(),
+            mime_type: mime_type.clone(),
             size_bytes: size,
             backend_type: config.backend_type.as_str().to_string(),
             backend_config_id: config_id.clone(),
@@ -146,6 +146,25 @@ pub async fn handle_tenant_upload(mut req: Request, env: &Env) -> Result<Respons
         };
         db::create_file_record(env, &record).await?;
         db::increment_quota_after_upload(env, &tenant_id, size).await?;
+
+        // Build response with file URL
+        let tenant = db::get_tenant(env, &tenant_id).await?.unwrap();
+        let public_url = if tenant.public_files == 1 {
+            Some(format!("/files/{}/{}", tenant_id, key))
+        } else {
+            None
+        };
+
+        return Response::from_json(&serde_json::json!({
+            "success": true,
+            "data": {
+                "key": key,
+                "filename": filename,
+                "mime_type": mime_type,
+                "size_bytes": size,
+                "public_url": public_url,
+            }
+        }));
     }
 
     Ok(resp)
@@ -292,7 +311,26 @@ pub async fn handle_tenant_list_files(req: Request, env: &Env) -> Result<Respons
     }))
 }
 
-/// POST /api/t/oss-preview — proxy OSS preview JSON-RPC request
+/// GET /files/:tenant_id/*key — public download (no auth, requires tenant.public_files=1)
+pub async fn handle_public_download(req: Request, env: &Env, tenant_id: &str, key: &str) -> Result<Response> {
+    let tenant = db::get_tenant(env, tenant_id)
+        .await?
+        .ok_or_else(|| worker::Error::RustError("Tenant not found".into()))?;
+
+    if tenant.is_active == 0 || tenant.public_files == 0 {
+        return Ok(Response::empty()?.with_status(404));
+    }
+
+    let config = config_store::get_config(env, &tenant.default_backend_config_id)
+        .await?
+        .ok_or_else(|| worker::Error::RustError("Backend config not found".into()))?;
+
+    match config.backend_type {
+        BackendType::S3 => s3_proxy::proxy_download(req, env, &tenant.default_backend_config_id, key).await,
+        BackendType::Dufs => dufs_proxy::proxy_download(req, env, &tenant.default_backend_config_id, key).await,
+        BackendType::Redis => redis_proxy::proxy_get(req, env, &tenant.default_backend_config_id, key).await,
+    }
+}
 pub async fn handle_tenant_oss_preview(mut req: Request, env: &Env) -> Result<Response> {
     let (tenant_id, config_id) = resolve_tenant_backend(&req, env).await?;
 

@@ -125,6 +125,16 @@ pub async fn main(req: Request, env: Env, _ctx: worker::Context) -> Result<Respo
             add_cors(&mut resp);
             Ok(resp)
         })
+        // ── Public file download (no auth, tenant must have public_files=1) ──
+        .get_async("/files/:tenant_id/*key", |req, ctx| async move {
+            if let (Some(tenant_id), Some(key)) = (ctx.param("tenant_id"), ctx.param("key")) {
+                let mut resp = tenant_handlers::handle_public_download(req, &ctx.env, tenant_id, key).await?;
+                add_cors(&mut resp);
+                Ok(resp)
+            } else {
+                Response::error("Missing tenant_id or key", 400)
+            }
+        })
         // ── Admin: config CRUD ──
         .get_async("/api/admin/configs", |req, ctx| async move {
             admin_handlers::handle_list(req, &ctx.env).await
